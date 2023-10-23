@@ -6,6 +6,12 @@ class MessageStateException(Exception):
         self.message = message
 
 
+class MessageContent:
+    def __init__(self, text=None, predefined_answers=None):
+        self.text = text
+        self.predefined_answers = predefined_answers
+
+
 class Message:
     def __init__(self, text, callback=None):
         self._text = text
@@ -15,7 +21,7 @@ class Message:
     def consume(self):
         if not self.has_been_consumed():
             self._sent = True
-            return self._text
+            return MessageContent(text=self._text)
         else:
             raise MessageStateException("Message has already been consumed")
 
@@ -27,6 +33,16 @@ class Message:
 
     def handle_user_input(self, response):
         return self._callback(response)
+
+
+class PredefinedAnswersMessage(Message):
+    def __init__(self, text, callback, answers):
+        self._answers = answers
+        super(PredefinedAnswersMessage, self).__init__(text, callback)
+
+    def consume(self):
+        super(PredefinedAnswersMessage, self).consume()
+        return MessageContent(text=self._text, predefined_answers=self._answers)
 
 
 class ConversationState:

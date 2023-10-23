@@ -1,4 +1,4 @@
-from conversation.engine import Message
+from conversation.engine import Message, PredefinedAnswersMessage
 
 
 def create_morning_conversation():
@@ -29,7 +29,7 @@ class GoodbyeMessage(Message):
 
 
 def weather_expert_callback(response):
-    if "good" in response.lower():
+    if "sunny" in response.lower():
         return [Message("I'm glad you're enjoying the weather!")]
     else:
         return [Message("Sorry to hear that.")]
@@ -38,16 +38,17 @@ def weather_expert_callback(response):
 class WeatherExpert:
 
     def handle_response(self, response):
-        if "good" in response.lower():
+        if "sunny" in response.lower():
             return Message("I'm glad you're enjoying the weather!")
         else:
             return Message("Sorry to hear that.")
 
 
-class WeatherQuestion(Message):
+class WeatherQuestion(PredefinedAnswersMessage):
     PROMPTS = [
         "How is the weather today?",
     ]
+    WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy"]
 
     def __init__(self):
-        super(WeatherQuestion, self).__init__(self.PROMPTS[0], callback=weather_expert_callback)
+        super(WeatherQuestion, self).__init__(self.PROMPTS[0], weather_expert_callback, self.WEATHER_CONDITIONS)
