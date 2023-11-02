@@ -14,18 +14,17 @@ class MessageContent:
 
 class Message:
     def __init__(self, text, callback=None):
-        self._text = text
         self._callback = callback
         self._sent = False
+        self.content = MessageContent(text=text)
 
-    def consume(self):
-        if not self.has_been_consumed():
+    def mark_as_sent(self):
+        if not self.has_been_sent():
             self._sent = True
-            return MessageContent(text=self._text)
         else:
             raise MessageStateException("Message has already been consumed")
 
-    def has_been_consumed(self):
+    def has_been_sent(self):
         return self._sent
 
     def requires_user_input(self):
@@ -35,14 +34,25 @@ class Message:
         return self._callback(response)
 
 
-class PredefinedAnswersMessage(Message):
-    def __init__(self, text, callback, answers):
-        self._answers = answers
-        super(PredefinedAnswersMessage, self).__init__(text, callback)
+class AnswerableMessage(Message):
+    def __init__(self, text, callback):
+        super(AnswerableMessage, self).__init__(text, callback)
 
-    def consume(self):
-        super(PredefinedAnswersMessage, self).consume()
-        return MessageContent(text=self._text, predefined_answers=self._answers)
+
+class SingleAnswerMessage(AnswerableMessage):
+    def __init__(self, text, callback, answers):
+        super(SingleAnswerMessage, self).__init__(text, callback)
+        self.content = MessageContent(text=text, predefined_answers=answers)
+
+    def mark_as_sent(self):
+        super(SingleAnswerMessage, self).mark_as_sent()
+        return self.content
+
+
+class MultiAnswerMessage(SingleAnswerMessage):
+    def __init__(self, text, callback, answers):
+        super(MultiAnswerMessage, self).__init__(text, callback, answers)
+        self.content.predefined_answers.append(["Fertig"])
 
 
 class ConversationState:
@@ -66,8 +76,9 @@ class ConversationEngine:
         return self.current_message
 
     def is_waiting_for_user_input(self):
-        return self.current_message.has_been_consumed() and self.current_message.requires_user_input()
+        return self.current_message.has_been_sent() and self.current_message.requires_user_input()
 
     def handle_user_input(self, text):
         answers = self.current_message.handle_user_input(text)
-        self.queue.extendleft(answers)
+        if answers:
+            self.queue.extendleft(answers)

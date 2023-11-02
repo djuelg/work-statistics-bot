@@ -1,31 +1,113 @@
-from conversation.engine import Message, PredefinedAnswersMessage
+from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage
 
 
 def create_morning_conversation():
     return [
         MorningMessage(),
-        WeatherQuestion(),  # TODO Hiervon wird NICHT das OkPrompt geschrieben, nur das äußere UserInput
-        # QuestionaireConversation(global_state=self.global_state),
-        # MorningKickoffPrompt(global_state=self.global_state)
+        QuestionaireIntroductionMessage(),
+        StressStateQuestion(),
+        SleepinessQuestion(),
+        MentalFatigueQuestion(),
+        MoodQuestion(),
+        QuestionaireEvaluationMessage(),
         GoodbyeMessage()
     ]
 
 
 class MorningMessage(Message):
     PROMPTS = [
-        "Good morning!",
-        "Hello there!",
-        "Top of the morning to you!",
+        "Guten Morgen!",
+        "Hey!",
+        "Hallo, ich wünsche einen guten Morgen.",
         # Add more greetings here
     ]
 
     def __init__(self):
-        super(MorningMessage, self).__init__(self.PROMPTS[0])
+        super().__init__(self.PROMPTS[0])
+
+
+class QuestionaireIntroductionMessage(Message):
+    PROMPTS = [
+        "Lass uns durch ein paar Aussagen deinen aktuellen Blick auf die Welt einordnen. Bewerte diese bitte auf "
+        "einer Skala von '1 - trifft gar nicht zu' bis '5 - trifft vollkommen zu'.",
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0])
+
+
+class StressStateQuestion(SingleAnswerMessage):
+    PROMPTS = [
+        "Ich fühle mich gestresst. "
+        "Dieser kann sich z.B. ausdrücken durch Empfindungen wie Unruhe oder leichte Reizbarkeit",
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+
+
+
+class SleepinessQuestion(SingleAnswerMessage):
+    PROMPTS = [
+        "Ich fühle mich körperlich ermüdet. "
+        "Dies kann z.B. durch schlechten Schlaf entstehen und zu Kraftlosigkeit oder Unkonzentriertheit führen.",
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+
+
+class MentalFatigueQuestion(SingleAnswerMessage):
+    PROMPTS = [
+        "Ich fühle mich geistig ermüdet. "
+        "Dies kann z.B. durch anhaltende geistige Arbeiten entstehen und zu Konzentrationsproblemen,  Motivationslosigkeit und Unlust führen.",
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+
+
+class MoodQuestion(MultiAnswerMessage):
+    PROMPTS = [
+        "Versuche abschließend deine Laune mit den folgenden Begriffen zu beschreiben."
+    ]
+    STATES = [
+        ["fröhlich", "glücklich", "produktiv"],
+        ["müde", "genervt", "gestresst"],
+        ["motiviert", "dankbar", "verliebt"],
+        ["traurig", "wütend", "erschöpft"],
+        ["ruhig", "unruhig", "ausgeglichen"],
+        ["unsicher", "krank", "schlapp"],
+        ["zufrieden", "gleichgültig", "stolz"],
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+
+
+def update_state_callback(response):
+    pass # TODO return/save state information
+
+class QuestionaireEvaluationMessage(Message):
+    PROMPTS = [
+        "Alles klar, danke für deine Zeit! Ich kümmere mich nun um die Auswertung deiner Aussagen.",
+    ] # TODO: Nutzen des State um etwas passendes zu antworten
+
+    def __init__(self):
+        super().__init__(self.PROMPTS[0])
 
 
 class GoodbyeMessage(Message):
+    PROMPTS = [
+        "Mach's gut!",
+        "Bis später!",
+    ]
+
     def __init__(self):
-        super(GoodbyeMessage, self).__init__("Goodbye!")
+        super().__init__(self.PROMPTS[0])
 
 
 def weather_expert_callback(response):
@@ -44,7 +126,7 @@ class WeatherExpert:
             return Message("Sorry to hear that.")
 
 
-class WeatherQuestion(PredefinedAnswersMessage):
+class WeatherQuestion(SingleAnswerMessage):
     PROMPTS = [
         "How is the weather today?",
     ]
