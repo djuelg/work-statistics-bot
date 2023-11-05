@@ -4,6 +4,7 @@
 
 # User-specific stuff
 secrets.py
+conversation_bot.pkl
 
 .idea/**/workspace.xml
 .idea/**/tasks.xml

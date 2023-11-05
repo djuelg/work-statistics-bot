@@ -1,15 +1,15 @@
-from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage
+from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage, MessageStateException
 
 
 def create_morning_conversation():
     return [
         MorningMessage(),
         QuestionaireIntroductionMessage(),
-        StressStateQuestion(),
+        StressQuestion(),
         SleepinessQuestion(),
         MentalFatigueQuestion(),
         MoodQuestion(),
-        QuestionaireEvaluationMessage(),
+        QuestionnaireEvaluationMessage(),
         GoodbyeMessage()
     ]
 
@@ -36,7 +36,8 @@ class QuestionaireIntroductionMessage(Message):
         super().__init__(self.PROMPTS[0])
 
 
-class StressStateQuestion(SingleAnswerMessage):
+class StressQuestion(SingleAnswerMessage):
+    KEY = 'stress_state'
     PROMPTS = [
         "Ich fühle mich gestresst. "
         "Dieser kann sich z.B. ausdrücken durch Empfindungen wie Unruhe oder leichte Reizbarkeit",
@@ -44,11 +45,11 @@ class StressStateQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
-
+        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
 
 
 class SleepinessQuestion(SingleAnswerMessage):
+    KEY = 'sleepiness_state'
     PROMPTS = [
         "Ich fühle mich körperlich ermüdet. "
         "Dies kann z.B. durch schlechten Schlaf entstehen und zu Kraftlosigkeit oder Unkonzentriertheit führen.",
@@ -56,10 +57,11 @@ class SleepinessQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
 
 
 class MentalFatigueQuestion(SingleAnswerMessage):
+    KEY = 'mental_fatigue_state'
     PROMPTS = [
         "Ich fühle mich geistig ermüdet. "
         "Dies kann z.B. durch anhaltende geistige Arbeiten entstehen und zu Konzentrationsproblemen,  Motivationslosigkeit und Unlust führen.",
@@ -67,10 +69,11 @@ class MentalFatigueQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
 
 
 class MoodQuestion(MultiAnswerMessage):
+    KEY = 'mood_state'
     PROMPTS = [
         "Versuche abschließend deine Laune mit den folgenden Begriffen zu beschreiben."
     ]
@@ -85,19 +88,43 @@ class MoodQuestion(MultiAnswerMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_callback, self.STATES)
+        super().__init__(self.PROMPTS[0], update_state_multi_answer_callback, self.STATES)
 
 
-def update_state_callback(response):
-    pass # TODO return/save state information
+def update_state_single_answer_callback(key, value, cengine=None):
+    value = float(value) if value.isnumeric() else value
+    cengine.state[key] = value
 
-class QuestionaireEvaluationMessage(Message):
+
+def update_state_multi_answer_callback(key, value, cengine=None):
+    value = float(value) if value.isnumeric() else value
+    if key not in cengine.state:
+        cengine.state[key] = []
+    cengine.state[key].append(value)
+
+
+class QuestionnaireEvaluationMessage(Message):
     PROMPTS = [
-        "Alles klar, danke für deine Zeit! Ich kümmere mich nun um die Auswertung deiner Aussagen.",
-    ] # TODO: Nutzen des State um etwas passendes zu antworten
+        "Alles klar, danke für deine Zeit!\n",
+    ]
 
     def __init__(self):
         super().__init__(self.PROMPTS[0])
+
+    def content(self, cengine=None):
+        avg_mood_states = [cengine.state[StressQuestion.KEY],
+                           cengine.state[SleepinessQuestion.KEY],
+                           cengine.state[MentalFatigueQuestion.KEY]]
+
+        avg_mood = round(sum(avg_mood_states) / len(avg_mood_states), 2)
+        self._content.text += f"Im Mittel ergeben deine Aussagen einen Wert von {avg_mood}"
+        if avg_mood < 3:
+            self._content.text += ", was relativ niedrig ist. Das freut mich :)\n"
+        elif avg_mood >= 3.75:
+            self._content.text += ". Das ist recht hoch. Also lass es ab jetzt lieber etwas langsamer angehen...\n"
+        else:
+            self._content.text += "."
+        return self._content
 
 
 class GoodbyeMessage(Message):
