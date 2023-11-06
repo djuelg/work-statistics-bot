@@ -1,3 +1,4 @@
+import random
 from collections import deque
 
 
@@ -8,7 +9,7 @@ class MessageStateException(Exception):
 
 class MessageContent:
     def __init__(self, text=None, predefined_answers=None):
-        self.text = text
+        self.text = text if not isinstance(text, list) else random.choice(text)
         self.predefined_answers = predefined_answers
 
 
@@ -38,20 +39,10 @@ class Message:
 
 
 class AnswerableMessage(Message):
-    def __init__(self, text, callback):
-        super(AnswerableMessage, self).__init__(text, callback)
-
-
-class SingleAnswerMessage(AnswerableMessage):
     KEY = None
 
-    def __init__(self, text, callback, answers):
-        super(SingleAnswerMessage, self).__init__(text, callback)
-        self._content = MessageContent(text=text, predefined_answers=answers)
-
-    def mark_as_sent(self):
-        super(SingleAnswerMessage, self).mark_as_sent()
-        return self._content
+    def __init__(self, text, callback):
+        super(AnswerableMessage, self).__init__(text, callback)
 
     def handle_user_input(self, response, cengine=None):
         if not self.KEY:
@@ -59,10 +50,29 @@ class SingleAnswerMessage(AnswerableMessage):
         return self._callback(self.KEY, response, cengine=cengine)
 
 
+class SingleAnswerMessage(AnswerableMessage):
+
+    def __init__(self, text, callback, answers):
+        super(SingleAnswerMessage, self).__init__(text, callback)
+        self._content = MessageContent(text=text, predefined_answers=answers)
+
+
 class MultiAnswerMessage(SingleAnswerMessage):
     def __init__(self, text, callback, answers):
         super(MultiAnswerMessage, self).__init__(text, callback, answers)
         self._content.predefined_answers.append(["Fertig"])
+
+
+def update_state_single_answer_callback(key, value, cengine=None):
+    value = float(value) if value.isnumeric() else value
+    cengine.state[key] = value
+
+
+def update_state_multi_answer_callback(key, value, cengine=None):
+    value = float(value) if value.isnumeric() else value
+    if key not in cengine.state:
+        cengine.state[key] = []
+    cengine.state[key].append(value)
 
 
 class ConversationEngine:

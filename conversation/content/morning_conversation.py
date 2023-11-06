@@ -1,4 +1,5 @@
-from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage, MessageStateException
+from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage, MessageStateException, \
+    update_state_multi_answer_callback, update_state_single_answer_callback
 
 
 def create_morning_conversation():
@@ -23,7 +24,7 @@ class MorningMessage(Message):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0])
+        super().__init__(self.PROMPTS)
 
 
 class QuestionaireIntroductionMessage(Message):
@@ -33,7 +34,7 @@ class QuestionaireIntroductionMessage(Message):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0])
+        super().__init__(self.PROMPTS)
 
 
 class StressQuestion(SingleAnswerMessage):
@@ -45,7 +46,7 @@ class StressQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
+        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
 
 
 class SleepinessQuestion(SingleAnswerMessage):
@@ -57,7 +58,7 @@ class SleepinessQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
+        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
 
 
 class MentalFatigueQuestion(SingleAnswerMessage):
@@ -69,7 +70,7 @@ class MentalFatigueQuestion(SingleAnswerMessage):
     STATES = ["1", "2", "3", "4", "5"]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_single_answer_callback, self.STATES)
+        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
 
 
 class MoodQuestion(MultiAnswerMessage):
@@ -88,19 +89,7 @@ class MoodQuestion(MultiAnswerMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0], update_state_multi_answer_callback, self.STATES)
-
-
-def update_state_single_answer_callback(key, value, cengine=None):
-    value = float(value) if value.isnumeric() else value
-    cengine.state[key] = value
-
-
-def update_state_multi_answer_callback(key, value, cengine=None):
-    value = float(value) if value.isnumeric() else value
-    if key not in cengine.state:
-        cengine.state[key] = []
-    cengine.state[key].append(value)
+        super().__init__(self.PROMPTS, update_state_multi_answer_callback, self.STATES)
 
 
 class QuestionnaireEvaluationMessage(Message):
@@ -109,7 +98,7 @@ class QuestionnaireEvaluationMessage(Message):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0])
+        super().__init__(self.PROMPTS)
 
     def content(self, cengine=None):
         avg_mood_states = [cengine.state[StressQuestion.KEY],
@@ -134,7 +123,7 @@ class GoodbyeMessage(Message):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS[0])
+        super().__init__(self.PROMPTS)
 
 
 def weather_expert_callback(response):
@@ -160,4 +149,4 @@ class WeatherQuestion(SingleAnswerMessage):
     WEATHER_CONDITIONS = ["sunny", "cloudy", "rainy"]
 
     def __init__(self):
-        super(WeatherQuestion, self).__init__(self.PROMPTS[0], weather_expert_callback, self.WEATHER_CONDITIONS)
+        super(WeatherQuestion, self).__init__(self.PROMPTS, weather_expert_callback, self.WEATHER_CONDITIONS)

@@ -6,7 +6,8 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
     CallbackQueryHandler, PicklePersistence
 
 from conversation.content.morning_conversation import create_morning_conversation
-from conversation.engine import ConversationEngine, AnswerableMessage, MultiAnswerMessage
+from conversation.content.setup_conversation import create_setup_conversation
+from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage
 from secrets import BOT_TOKEN
 
 CENGINE ='conversation_engine'
@@ -18,10 +19,6 @@ logging.basicConfig(
 )
 
 
-# TODO: Use example of PicklePersistence, and maybe ConversationHandler:
-# https://docs.python-telegram-bot.org/en/v20.6/examples.persistentconversationbot.html
-
-
 def get_conversation_engine(context):
     cengine = context.user_data.get(CENGINE, None)
     if cengine is None:
@@ -30,13 +27,18 @@ def get_conversation_engine(context):
     return cengine
 
 
+def create_button(data):
+    content = (data[0], data[1]) if isinstance(data, tuple) else (data, data)
+    return InlineKeyboardButton(content[0], callback_data=content[1])
+
+
 def create_answer_options(message):
     buttons_1d, buttons_2d = [], []
     for row in message.content().predefined_answers:
         if isinstance(row, list):
-            buttons_2d.append([InlineKeyboardButton(button_text, callback_data=button_text) for button_text in row])
+            buttons_2d.append([create_button(button_text) for button_text in row])
         else:
-            buttons_1d.append(InlineKeyboardButton(row, callback_data=row))
+            buttons_1d.append(create_button(row))
     return InlineKeyboardMarkup([buttons_1d] if buttons_1d else buttons_2d)
 
 
@@ -45,7 +47,7 @@ async def send_next_messages(context, update):
     while cengine.queue:
         message = cengine.next_message()
         reply_markup = None
-        if isinstance(message, AnswerableMessage):
+        if isinstance(message, SingleAnswerMessage) or isinstance(message, MultiAnswerMessage):
             reply_markup = create_answer_options(message)
 
         await context.bot.send_message(
@@ -59,7 +61,7 @@ async def send_next_messages(context, update):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context)
-    cengine.begin_conversation(create_morning_conversation())
+    cengine.begin_conversation(create_setup_conversation())
     await send_next_messages(context, update)
 
 
