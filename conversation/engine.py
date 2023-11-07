@@ -81,8 +81,7 @@ class ConversationEngine:
         self.queue = deque(queue) if queue is not None else deque()
         self.current_message = None
 
-    def begin_conversation(self, conversation, state=None):
-        self.state = state if state else dict()
+    def begin_new_conversation(self, conversation):
         self.queue.clear()
         self.queue.extend(conversation)
 
