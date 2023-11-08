@@ -60,19 +60,16 @@ class SingleAnswerMessage(AnswerableMessage):
 class MultiAnswerMessage(SingleAnswerMessage):
     def __init__(self, text, callback, answers):
         super(MultiAnswerMessage, self).__init__(text, callback, answers)
-        self._content.predefined_answers.append(["Fertig"])
 
 
 def update_state_single_answer_callback(key, value, cengine=None):
     value = float(value) if value.isnumeric() else value
-    cengine.state[key] = value
+    cengine.update_state(key, value)
 
 
 def update_state_multi_answer_callback(key, value, cengine=None):
     value = float(value) if value.isnumeric() else value
-    if key not in cengine.state:
-        cengine.state[key] = []
-    cengine.state[key].append(value)
+    cengine.append_state(key, value)
 
 
 class ConversationEngine:
@@ -96,3 +93,27 @@ class ConversationEngine:
         answers = self.current_message.handle_user_input(text, cengine=self)
         if answers:
             self.queue.extendleft(answers)
+
+    def get_state(self, key):
+        nested_keys = key.split('.')
+        state = self.state
+        for key in nested_keys:
+            state = state.get(key, {})
+        return state
+
+    def update_state(self, key, value):
+        nested_keys = key.split('.')
+        state = self.state
+        for key in nested_keys[:-1]:
+            state = state.setdefault(key, {})
+        state[nested_keys[-1]] = value
+
+    def append_state(self, key, value):
+        nested_keys = key.split('.')
+        state = self.state
+        for key in nested_keys[:-1]:
+            state = state.setdefault(key, {})
+
+        if nested_keys[-1] not in state:
+            state[nested_keys[-1]] = []
+        state[nested_keys[-1]].append(value)

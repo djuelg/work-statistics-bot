@@ -1,12 +1,13 @@
+import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict
 
 import pytz
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, \
     CallbackQueryHandler, PicklePersistence
 
+from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage
@@ -76,17 +77,10 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del context.user_data[CENGINE]
 
 
-def facts_to_str(user_data: Dict[str, str]) -> str:
-    facts = [f"{key}:  {value}" for key, value in user_data.items()]
-    return "\n".join(facts).join(["\n", "\n"])
-
-
 async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_data = context.user_data[CENGINE].state
-    facts = [f"{key}:  {value}" for key, value in user_data.items()]
-    result = "\n".join(facts).join(["\n", "\n"])
+    json_str = json.dumps(context.user_data[CENGINE].state, indent=4)
     await update.message.reply_text(
-        f'This is what you already told me: {result}'
+        f'This is what you already told me: \n{json_str}'
     )
 
 
@@ -113,11 +107,13 @@ async def general_callback_handler(update, context, user_input):
 
 
 async def setup_jobqueue_callbacks(cengine, context, update):
-    work_begin_hour = int(cengine.state.get(WorkBeginQuestion.KEY))
-    morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))  # (hour=14,minute=39,second=30))
+    work_begin_hour = int(cengine.get_state(WorkBeginQuestion.KEY))
+    morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))
+    # morning_time = datetime.now() + timedelta(seconds=20)  # debug override
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)
     morning_job_name = f"{update.effective_chat.id}_morning_message"
     afternoon_time = morning_time + timedelta(hours=4, minutes=15)
+    # afternoon_time = morning_time + timedelta(seconds=30) # debug override
     afternoon_job_name = f"{update.effective_chat.id}_afternoon_message"
 
     context.job_queue.run_daily(jobqueue_callback, morning_time,
@@ -133,13 +129,24 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     if context.job.name == f"{context.job.chat_id}_morning_message":
         conversation = create_morning_conversation()
     elif context.job.name == f"{context.job.chat_id}_afternoon_message":
-        conversation = create_morning_conversation()  # TODO replace with afternoon_conversation
-        # TODO: Check ob wir hier die Daten der morning_conversation haben (weil passed_context alt sein könnte)
+        conversation = create_afternoon_conversation()
     else:
         return
 
-    cengine.begin_new_conversation(conversation)  # TODO Don't always begin new conversation
+    cengine.begin_new_conversation(conversation)  # TODO Don't always begin new conversation (?)
     await send_next_messages(passed_context, context.job.chat_id)
+
+
+async def override_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cengine = get_conversation_engine(context)
+    cengine.begin_new_conversation(create_morning_conversation())
+    await send_next_messages(context, update.effective_chat.id)
+
+
+async def override_afternoon(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cengine = get_conversation_engine(context)
+    cengine.begin_new_conversation(create_afternoon_conversation())
+    await send_next_messages(context, update.effective_chat.id)
 
 
 # origin: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Extensions---Your-first-Bot
@@ -150,13 +157,17 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     stop_handler = CommandHandler('stop', stop)
     show_handler = CommandHandler('show', show_data)
-    standard_response_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text_callbacks)
-    callback_handler = CallbackQueryHandler(handle_button_callbacks)
+    override_morning_handler = CommandHandler('override_morning', override_morning)
+    override_afternoon_handler = CommandHandler('override_afternoon', override_afternoon)
+    text_callback_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text_callbacks)
+    button_callback_handler = CallbackQueryHandler(handle_button_callbacks)
 
     application.add_handler(start_handler)
     application.add_handler(stop_handler)
     application.add_handler(show_handler)
-    application.add_handler(standard_response_handler)
-    application.add_handler(callback_handler)
+    application.add_handler(override_morning_handler)
+    application.add_handler(override_afternoon_handler)
+    application.add_handler(text_callback_handler)
+    application.add_handler(button_callback_handler)
 
     application.run_polling()
