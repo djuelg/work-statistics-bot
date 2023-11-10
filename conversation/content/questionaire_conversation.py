@@ -1,20 +1,53 @@
 from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage, update_state_multi_answer_callback, update_state_single_answer_callback
 
 
-class QuestionnaireIntroductionMessage(Message):
+class TasksQuestion(MultiAnswerMessage):
     PROMPTS = [
-        "Lass uns durch ein paar Aussagen deinen aktuellen Blick auf die Welt einordnen. Bewerte diese bitte auf "
-        "einer Skala von '1 - trifft gar nicht zu' bis '5 - trifft vollkommen zu'.",
+        "Was steht in den nächsten Stunden an? "
+        "Wähle gerne aus den Beispielen unten, oder beschreibe selbst was ansteht."
+    ]
+    STATES = [
+        ["Coding", "Bugfixing", "Doku schreiben"],
+        ["Testen", "Ops-Aufgaben", "Konzeptionieren"],
+        ["Fertig"]
     ]
 
-    def __init__(self):
-        super().__init__(self.PROMPTS)
+    def __init__(self, key):
+        self.KEY = key
+        super().__init__(self.PROMPTS, update_state_multi_answer_callback, self.STATES)
+
+
+class EnergyQuestion(SingleAnswerMessage):
+    PROMPTS = [
+        "Ich fühle mich energetisch. "
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self, key):
+        self.KEY = key
+        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
+
+
+def update_reversed_numeric_answer_callback(key, value, cengine=None):
+    reverse_value = 6 - float(value)
+    cengine.update_state(key, reverse_value)
+
+
+class AnxietyQuestion(SingleAnswerMessage):
+    PROMPTS = [
+        "Ich fühle mich unruhig und nervös. "
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self, key):
+        self.KEY = key
+        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
 
 
 class StressQuestion(SingleAnswerMessage):
     PROMPTS = [
         "Ich fühle mich gestresst. "
-        "Dieser kann sich z.B. ausdrücken durch Empfindungen wie Unruhe oder leichte Reizbarkeit",
+        # "Dieser kann sich z.B. ausdrücken durch Empfindungen wie Unruhe oder leichte Reizbarkeit",
     ]
     STATES = ["1", "2", "3", "4", "5"]
 
@@ -26,7 +59,7 @@ class StressQuestion(SingleAnswerMessage):
 class SleepinessQuestion(SingleAnswerMessage):
     PROMPTS = [
         "Ich fühle mich körperlich ermüdet. "
-        "Dies kann z.B. durch schlechten Schlaf entstehen und zu Kraftlosigkeit oder Unkonzentriertheit führen.",
+        # "Dies kann z.B. durch schlechten Schlaf entstehen und zu Kraftlosigkeit oder Unkonzentriertheit führen.",
     ]
     STATES = ["1", "2", "3", "4", "5"]
 
@@ -38,8 +71,8 @@ class SleepinessQuestion(SingleAnswerMessage):
 class MentalFatigueQuestion(SingleAnswerMessage):
     PROMPTS = [
         "Ich fühle mich geistig ermüdet. "
-        "Dies kann z.B. durch anhaltende geistige Arbeiten entstehen und zu Konzentrationsproblemen,"
-        "  Motivationslosigkeit und Unlust führen.",
+        # "Dies kann z.B. durch anhaltende geistige Arbeiten entstehen und zu Konzentrationsproblemen,"
+        # "  Motivationslosigkeit und Unlust führen.",
     ]
     STATES = ["1", "2", "3", "4", "5"]
 

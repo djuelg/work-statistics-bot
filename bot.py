@@ -137,6 +137,12 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     await send_next_messages(passed_context, context.job.chat_id)
 
 
+async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cengine = get_conversation_engine(context)
+    cengine.begin_new_conversation(create_setup_conversation(first_met=False))
+    await send_next_messages(context, update.effective_chat.id)
+
+
 async def override_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context)
     cengine.begin_new_conversation(create_morning_conversation())
@@ -157,6 +163,7 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     stop_handler = CommandHandler('stop', stop)
     show_handler = CommandHandler('show', show_data)
+    override_setup_handler = CommandHandler('override_setup', override_setup)
     override_morning_handler = CommandHandler('override_morning', override_morning)
     override_afternoon_handler = CommandHandler('override_afternoon', override_afternoon)
     text_callback_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text_callbacks)
@@ -165,6 +172,7 @@ if __name__ == '__main__':
     application.add_handler(start_handler)
     application.add_handler(stop_handler)
     application.add_handler(show_handler)
+    application.add_handler(override_setup_handler)
     application.add_handler(override_morning_handler)
     application.add_handler(override_afternoon_handler)
     application.add_handler(text_callback_handler)

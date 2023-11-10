@@ -1,9 +1,9 @@
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback, AnswerableMessage
 
 
-def create_setup_conversation():
+def create_setup_conversation(first_met=True):
     return [
-        FirstMetMessage(),
+        FirstMetMessage() if first_met else UpdateSetupMessage(),
         NameQuestion(),
         NameAnswerMessage(),
         WorkBeginQuestion(),
@@ -15,6 +15,16 @@ class FirstMetMessage(Message):
     PROMPTS = [
         "Hey! Freut mich dich kennenzulernen.",
         "Hi! Schön dich kennenzulernen.",
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS)
+
+
+class UpdateSetupMessage(Message):
+    PROMPTS = [
+        "Okay, lass uns nochmal durch deine Einstellungen gehen",
+        "Gut, schauen wir uns deine Einstellungen nochmal an.",
     ]
 
     def __init__(self):
