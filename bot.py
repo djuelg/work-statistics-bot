@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 
 import pytz
@@ -11,12 +12,18 @@ from conversation.content.afternoon_conversation import create_afternoon_convers
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage
-from secrets import BOT_TOKEN
+
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
 TZ_DE = 'Europe/Berlin'
 CENGINE ='conversation_engine'
 MULTI_ANSWER_FINISHED = 'Fertig'
+
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
+BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
+if not BOT_TOKEN:
+    from secrets import BOT_TOKEN
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -178,4 +185,7 @@ if __name__ == '__main__':
     application.add_handler(text_callback_handler)
     application.add_handler(button_callback_handler)
 
-    application.run_polling()
+    if WEBHOOK_URL:
+        application.run_webhook(listen="0.0.0.0", webhook_url=WEBHOOK_URL)
+    else:
+        application.run_polling()

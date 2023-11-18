@@ -8,7 +8,7 @@ packages = [{include = "mental_health_telegram_bot"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-python-telegram-bot = {version = "^20.6", extras = ["job-queue"]}
+python-telegram-bot = {version = "^20.6", extras = ["job-queue", "webhooks"]}
 
 [build-system]
 requires = ["poetry-core"]
