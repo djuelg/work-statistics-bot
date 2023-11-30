@@ -14,8 +14,7 @@ class MessageContent:
 
 
 class Message:
-    def __init__(self, text, callback=None):
-        self._callback = callback
+    def __init__(self, text):
         self._sent = False
         self._content = MessageContent(text=text)
 
@@ -31,35 +30,29 @@ class Message:
     def has_been_sent(self):
         return self._sent
 
-    def requires_user_input(self):
-        return self._callback is not None and callable(self._callback)
-
-    def handle_user_input(self, response, cengine=None):
-        return self._callback(response, cengine=cengine)
-
 
 class AnswerableMessage(Message):
-    KEY = None
 
-    def __init__(self, text, callback):
-        super(AnswerableMessage, self).__init__(text, callback)
+    def __init__(self, text, callback_key, callback, predefined_answers=None):
+        self.callback_key = callback_key
+        self._callback = callback
+        super(AnswerableMessage, self).__init__(text)
+        self._content = MessageContent(text=text, predefined_answers=predefined_answers)
 
     def handle_user_input(self, response, cengine=None):
-        if not self.KEY:
-            raise MessageStateException("KEY not set by superclass")
-        return self._callback(self.KEY, response, cengine=cengine)
+        if not self.callback_key:
+            raise MessageStateException("callback_key not set")
+        return self._callback(self.callback_key, response, cengine=cengine)
 
 
 class SingleAnswerMessage(AnswerableMessage):
-
-    def __init__(self, text, callback, answers):
-        super(SingleAnswerMessage, self).__init__(text, callback)
-        self._content = MessageContent(text=text, predefined_answers=answers)
+    def __init__(self, text, callback_key, callback, answers):
+        super(SingleAnswerMessage, self).__init__(text, callback_key, callback, predefined_answers=answers)
 
 
-class MultiAnswerMessage(SingleAnswerMessage):
-    def __init__(self, text, callback, answers):
-        super(MultiAnswerMessage, self).__init__(text, callback, answers)
+class MultiAnswerMessage(AnswerableMessage):
+    def __init__(self, text, callback_key, callback, answers):
+        super(MultiAnswerMessage, self).__init__(text, callback_key, callback, predefined_answers=answers)
 
 
 def update_state_single_answer_callback(key, value, cengine=None):
@@ -87,7 +80,7 @@ class ConversationEngine:
         return self.current_message
 
     def is_waiting_for_user_input(self):
-        return self.current_message.has_been_sent() and self.current_message.requires_user_input()
+        return self.current_message.has_been_sent() and isinstance(self.current_message, AnswerableMessage)
 
     def handle_user_input(self, text):
         answers = self.current_message.handle_user_input(text, cengine=self)

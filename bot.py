@@ -11,8 +11,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
-from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage
-
+from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
 TZ_DE = 'Europe/Berlin'
@@ -67,7 +66,7 @@ async def send_next_messages(context, chat_id):
         )
 
         message.mark_as_sent()
-        if message.requires_user_input():
+        if isinstance(message, AnswerableMessage):
             break
 
 
@@ -114,7 +113,7 @@ async def general_callback_handler(update, context, user_input):
 
 
 async def setup_jobqueue_callbacks(cengine, context, update):
-    work_begin_hour = int(cengine.get_state(WorkBeginQuestion.KEY))
+    work_begin_hour = int(cengine.get_state(WorkBeginQuestion.CALLBACK_KEY))
     morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))
     # morning_time = datetime.now() + timedelta(seconds=20)  # debug override
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)

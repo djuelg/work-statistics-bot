@@ -1,30 +1,24 @@
 from conversation.content.generic_messages import GoodbyeMessage, MorningMessage
 from conversation.content.questionaire_conversation import StressQuestion, \
     SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, QuestionnaireEvaluationMessage, \
-    EnergyQuestion, AnxietyQuestion, TasksQuestion
+    EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
 from conversation.engine import Message
 
-MORNING_TASKS_KEY = 'daily_questionnaire.morning.tasks'
-MORNING_ENERGY_KEY = 'daily_questionnaire.morning.energy_state'
-MORNING_STRESS_KEY = 'daily_questionnaire.morning.stress_state'
-MORNING_ANXIETY_KEY = 'daily_questionnaire.morning.anxiety_state'
-MORNING_SLEEPINESS_KEY = 'daily_questionnaire.morning.sleepiness_state'
-MORNING_MENTAL_FATIGUE_KEY = 'daily_questionnaire.morning.mental_fatigue_state'
-MORNING_MOOD_KEY = 'daily_questionnaire.morning.mood_state'
+KEY_GROUPING_MORNING = 'morning'
 
 
 def create_morning_conversation():
     return [
         MorningMessage(),
-        TasksQuestion(MORNING_TASKS_KEY),
+        TasksQuestion(KEY_GROUPING_MORNING),
         QuestionnaireIntroductionMessage(),
-        EnergyQuestion(MORNING_ENERGY_KEY),
-        SleepinessQuestion(MORNING_SLEEPINESS_KEY),
-        AnxietyQuestion(MORNING_ANXIETY_KEY),
-        MentalFatigueQuestion(MORNING_MENTAL_FATIGUE_KEY),
-        StressQuestion(MORNING_STRESS_KEY),
-        MoodQuestion(MORNING_MOOD_KEY),
-        QuestionnaireEvaluationMessage([MORNING_STRESS_KEY, MORNING_SLEEPINESS_KEY, MORNING_MENTAL_FATIGUE_KEY]),
+        EnergyQuestion(KEY_GROUPING_MORNING),
+        SleepinessQuestion(KEY_GROUPING_MORNING),
+        AnxietyQuestion(KEY_GROUPING_MORNING),
+        MentalFatigueQuestion(KEY_GROUPING_MORNING),
+        StressQuestion(KEY_GROUPING_MORNING),
+        MoodQuestion(KEY_GROUPING_MORNING, callback=finalize_questionnaire_callback),
+        # QuestionnaireEvaluationMessage([MORNING_ENERGY_KEY, MORNING_SLEEPINESS_KEY, MORNING_ANXIETY_KEY, MORNING_MENTAL_FATIGUE_KEY, MORNING_STRESS_KEY]),
         GoodbyeMessage()
     ]
 

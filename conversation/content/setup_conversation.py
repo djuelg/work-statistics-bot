@@ -32,7 +32,7 @@ class UpdateSetupMessage(Message):
 
 
 class NameQuestion(AnswerableMessage):
-    KEY = 'username'
+    CALLBACK_KEY = 'username'
     PROMPTS = [
         "Wie heißt du?",
         "Wie möchtest du genannt werden?",
@@ -40,7 +40,7 @@ class NameQuestion(AnswerableMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS, update_state_single_answer_callback)
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, update_state_single_answer_callback)
 
 
 class NameAnswerMessage(Message):
@@ -54,7 +54,7 @@ class NameAnswerMessage(Message):
 
 
 class WorkBeginQuestion(SingleAnswerMessage):
-    KEY = 'work_begin_time'
+    CALLBACK_KEY = 'work_begin_time'
     PROMPTS = [
         "Wann fängst du normalerweise morgens an zu arbeiten?",
         "Wann beginnst du im Regelfall morgens mit der Arbeit?"
@@ -65,7 +65,7 @@ class WorkBeginQuestion(SingleAnswerMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS, update_state_single_answer_callback, self.STATES)
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, update_state_single_answer_callback, self.STATES)
 
 
 class SetupWrapupMessage(Message):
