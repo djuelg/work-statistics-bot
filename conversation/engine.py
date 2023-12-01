@@ -2,6 +2,9 @@ import random
 from collections import deque
 
 
+MULTI_ANSWER_FINISHED = 'Fertig'
+
+
 class MessageStateException(Exception):
     def __init__(self, message):
         self.message = message
@@ -39,10 +42,11 @@ class AnswerableMessage(Message):
         super(AnswerableMessage, self).__init__(text)
         self._content = MessageContent(text=text, predefined_answers=predefined_answers)
 
-    def handle_user_input(self, response, cengine=None):
+    def handle_user_input(self, response, cengine=None, is_multi_answer_finished=False):
         if not self.callback_key:
             raise MessageStateException("callback_key not set")
-        return self._callback(self.callback_key, response, cengine=cengine)
+        return self._callback(self.callback_key, response,
+                              cengine=cengine, is_multi_answer_finished=is_multi_answer_finished)
 
 
 class SingleAnswerMessage(AnswerableMessage):
@@ -55,14 +59,16 @@ class MultiAnswerMessage(AnswerableMessage):
         super(MultiAnswerMessage, self).__init__(text, callback_key, callback, predefined_answers=answers)
 
 
-def update_state_single_answer_callback(key, value, cengine=None):
-    value = float(value) if value.isnumeric() else value
-    cengine.update_state(key, value)
+def update_state_single_answer_callback(key, value, cengine=None, is_multi_answer_finished=False):
+    if not is_multi_answer_finished:
+        value = float(value) if value.isnumeric() else value
+        cengine.update_state(key, value)
 
 
-def update_state_multi_answer_callback(key, value, cengine=None):
-    value = float(value) if value.isnumeric() else value
-    cengine.append_state(key, value)
+def update_state_multi_answer_callback(key, value, cengine=None, is_multi_answer_finished=False):
+    if not is_multi_answer_finished:
+        value = float(value) if value.isnumeric() else value
+        cengine.append_state(key, value)
 
 
 class ConversationEngine:
@@ -83,7 +89,9 @@ class ConversationEngine:
         return self.current_message.has_been_sent() and isinstance(self.current_message, AnswerableMessage)
 
     def handle_user_input(self, text):
-        answers = self.current_message.handle_user_input(text, cengine=self)
+        is_multi_answer_finished = isinstance(self.current_message, MultiAnswerMessage) and text == MULTI_ANSWER_FINISHED
+        answers = self.current_message.handle_user_input(text,
+                                                         cengine=self, is_multi_answer_finished=is_multi_answer_finished)
         if answers:
             self.queue.extendleft(answers)
 

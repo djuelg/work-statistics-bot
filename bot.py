@@ -11,12 +11,12 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
-from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage
+from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
+    MULTI_ANSWER_FINISHED
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
 TZ_DE = 'Europe/Berlin'
 CENGINE ='conversation_engine'
-MULTI_ANSWER_FINISHED = 'Fertig'
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
@@ -101,8 +101,8 @@ async def handle_button_callbacks(update: Update, context: ContextTypes.DEFAULT_
 async def general_callback_handler(update, context, user_input):
     cengine = get_conversation_engine(context)
     if cengine.is_waiting_for_user_input():
-        if not isinstance(cengine.current_message, MultiAnswerMessage) or user_input != MULTI_ANSWER_FINISHED:
-            cengine.handle_user_input(user_input)
+        cengine.handle_user_input(user_input)
+
         if not isinstance(cengine.current_message, MultiAnswerMessage) or user_input == MULTI_ANSWER_FINISHED:
             if isinstance(cengine.current_message, WorkBeginQuestion):
                 await setup_jobqueue_callbacks(cengine, context, update)

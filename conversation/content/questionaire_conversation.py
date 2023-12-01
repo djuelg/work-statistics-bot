@@ -25,13 +25,10 @@ class TasksQuestion(MultiAnswerMessage):
         super(TasksQuestion, self).__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
 
 
-def finalize_questionnaire_callback(key, value, cengine=None):
-    update_state_multi_answer_callback(key, value, cengine)
-    if value != "Fertig":
+def finalize_questionnaire_callback(key, value, cengine=None, is_multi_answer_finished=False):
+    if not is_multi_answer_finished:
+        update_state_multi_answer_callback(key, value, cengine, is_multi_answer_finished=is_multi_answer_finished)
         return
-    # TODO Alles weitere nur bei "Fertig"
-    # TODO Aktuell kommt der Fertig call nicht hier durch
-    # TODO In dem Zuge vll. Token antworten statt str
 
     responses = []
 
@@ -49,8 +46,6 @@ def finalize_questionnaire_callback(key, value, cengine=None):
     # falls einzelne Kategorie
     # konkrete tipps und aufgaben für kategorie
 
-    # TODO: Das hier sollte im callback passieren, damit mehrere Nachrichten geschrieben werden können
-    # mood_states = {key: cengine.get_state(key) for key in self.KEYS}
     avg_mood = round(sum(mood_states.values()) / len(mood_states.values()), 2)
     # get all keys where value is 5
     most_severe = [key for key, value in mood_states.items() if value == 5]
@@ -74,9 +69,10 @@ def finalize_questionnaire_callback(key, value, cengine=None):
     return responses
 
 
-def update_reversed_numeric_answer_callback(key, value, cengine=None):
-    reverse_value = 6 - float(value)
-    cengine.update_state(key, reverse_value)
+def update_reversed_numeric_answer_callback(key, value, cengine=None, is_multi_answer_finished=False):
+    if not is_multi_answer_finished:
+        reverse_value = 6 - float(value)
+        cengine.update_state(key, reverse_value)
 
 
 class EnergyQuestion(SingleAnswerMessage):
