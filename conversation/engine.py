@@ -1,7 +1,11 @@
+import copy
 import random
 from collections import deque
+from datetime import datetime
 
 
+DAILY_QUESTIONNAIRE_KEY = 'daily_questionnaire'
+HISTORY_KEY = 'history'
 MULTI_ANSWER_FINISHED = 'Fertig'
 
 
@@ -95,6 +99,12 @@ class ConversationEngine:
         if answers:
             self.queue.extendleft(answers)
 
+    def copy_today_to_history(self):
+        datetime.today().date()
+        date_key = str(datetime.today().date())
+        today_data = copy.deepcopy(self.get_state(DAILY_QUESTIONNAIRE_KEY))
+        self.update_state(HISTORY_KEY, {date_key: today_data})
+
     def get_state(self, key):
         nested_keys = key.split('.')
         state = self.state
@@ -118,3 +128,10 @@ class ConversationEngine:
         if nested_keys[-1] not in state:
             state[nested_keys[-1]] = []
         state[nested_keys[-1]].append(value)
+
+    def drop_state(self, key):
+        nested_keys = key.split('.')
+        state = self.state
+        for key in nested_keys[:-1]:
+            state = state.setdefault(key, {})
+        del state[nested_keys[-1]]

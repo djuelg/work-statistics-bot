@@ -23,6 +23,9 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
 if not BOT_TOKEN:
     from secrets import BOT_TOKEN
 
+KEY_AFTERNOON_QUESTIONNAIRE = 'daily_questionnaire.afternoon'
+KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -118,14 +121,21 @@ async def setup_jobqueue_callbacks(cengine, context, update):
     # morning_time = datetime.now() + timedelta(seconds=20)  # debug override
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)
     morning_job_name = f"{update.effective_chat.id}_morning_message"
+
     afternoon_time = morning_time + timedelta(hours=4, minutes=15)
     # afternoon_time = morning_time + timedelta(seconds=30) # debug override
     afternoon_job_name = f"{update.effective_chat.id}_afternoon_message"
+
+    evening_time = morning_time.replace(hour=19, minute=37)
+    # evening_time = morning_time + timedelta(seconds=50) # debug override
+    evening_job_name = f"{update.effective_chat.id}_evening_message"
 
     context.job_queue.run_daily(jobqueue_callback, morning_time,
                                 chat_id=update.effective_chat.id, name=morning_job_name, days=DAYS_MON_FRI, data=context)
     context.job_queue.run_daily(jobqueue_callback, afternoon_time,
                                 chat_id=update.effective_chat.id, name=afternoon_job_name, days=DAYS_MON_FRI, data=context)
+    context.job_queue.run_daily(jobqueue_callback, evening_time,
+                                chat_id=update.effective_chat.id, name=evening_job_name, days=DAYS_MON_FRI, data=context)
 
 
 async def jobqueue_callback(context: ContextTypes.user_data) -> None:
@@ -136,6 +146,9 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
         conversation = create_morning_conversation()
     elif context.job.name == f"{context.job.chat_id}_afternoon_message":
         conversation = create_afternoon_conversation()
+    elif context.job.name == f"{context.job.chat_id}_evening_message":
+        cengine.copy_today_to_history()
+        conversation = []  # TODO Later create evening statistics
     else:
         return
 
@@ -151,14 +164,24 @@ async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def override_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context)
+    cengine.drop_state(KEY_MORNING_QUESTIONNAIRE)
     cengine.begin_new_conversation(create_morning_conversation())
     await send_next_messages(context, update.effective_chat.id)
 
 
 async def override_afternoon(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context)
+    cengine.drop_state(KEY_AFTERNOON_QUESTIONNAIRE)
     cengine.begin_new_conversation(create_afternoon_conversation())
     await send_next_messages(context, update.effective_chat.id)
+
+
+async def update_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cengine = get_conversation_engine(context)
+    cengine.copy_today_to_history()
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id, text='Daten in History übertragen.'
+    )
 
 
 # origin: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Extensions---Your-first-Bot
@@ -167,11 +190,12 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
 
     start_handler = CommandHandler('start', start)
-    stop_handler = CommandHandler('stop', stop)
+    stop_handler = CommandHandler('stop_and_delete', stop)
     show_handler = CommandHandler('show', show_data)
     override_setup_handler = CommandHandler('override_setup', override_setup)
     override_morning_handler = CommandHandler('override_morning', override_morning)
     override_afternoon_handler = CommandHandler('override_afternoon', override_afternoon)
+    update_history_handler = CommandHandler('update_history', update_history)
     text_callback_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text_callbacks)
     button_callback_handler = CallbackQueryHandler(handle_button_callbacks)
 
@@ -181,6 +205,7 @@ if __name__ == '__main__':
     application.add_handler(override_setup_handler)
     application.add_handler(override_morning_handler)
     application.add_handler(override_afternoon_handler)
+    application.add_handler(update_history_handler)
     application.add_handler(text_callback_handler)
     application.add_handler(button_callback_handler)
 
