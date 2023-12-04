@@ -1,3 +1,5 @@
+import random
+
 from conversation.engine import Message, SingleAnswerMessage, MultiAnswerMessage, update_state_multi_answer_callback, update_state_single_answer_callback
 
 
@@ -25,48 +27,105 @@ class TasksQuestion(MultiAnswerMessage):
         super(TasksQuestion, self).__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
 
 
+class WhatElseMessage(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.what_else'
+    STATES = [("Weiter...", "Weiter..."), ("Was kann ich sonst noch tun?", CALLBACK_KEY)]
+
+    def __init__(self, text):
+        super().__init__(text, self.CALLBACK_KEY, WhatElseMessage.remedy_callback, self.STATES)
+
+    @staticmethod
+    def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
+        if value == WhatElseMessage.CALLBACK_KEY:
+            return [
+                Message(text="- *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine Sport- oder Yoga-Routine einlegst. \n"
+                             "- *Sprich mit jemandem:* Führe ein kurzes Gespräch mit jemandem in deiner Nähe, oder rufe Freunde an. \n"
+                             "- *Schreib deine Gedanken auf:* Falls niemand in der Nähe ist, oder du keine Lust hast deine Situation mit jemandem zu besprechen, kann es auch hilfreich sein, deine Gedanken zu verschriftlichen. \n"
+                             "- *Eine Achtsamkeitsübung machen:* Bspw. sich ein paar Momente für Meditation oder Atemübungen zu nehmen \n"
+                             "- *Mach etwas anderes:* Erledige etwas kleines, wofür du eher die Muße hast und mach danach mit deiner eigentlichen Aufgabe weiter. \n"),
+                Message(
+                    text="In einigen Situation kann auch folgendes hilfreich sein:"),
+            ]
+        else:
+            return [Message(text="Okay, das wars erstmal.")]
+
+
+class MentalFatigueExpert:
+    def __init__(self, cengine, key_base):
+        self._cengine = cengine
+        self._key_base = key_base
+
+    def run(self):
+        return [
+            Message(text="*Zum Thema mentale Ermüdung:* \n"
+                         "Denk daran, dass mentale Ermüdung durch anhaltende mentale Anstrengungen entsteht. "
+                         "Häufig geht sie mit einem Gefühl von Unlust weiterzumachen einher. "
+                         "Dein Körper versucht also dir zu vermitteln, mehr Pausen einzulegen."),
+            WhatElseMessage(text="Lass es ruhig angehen, und mache etwas was dich mental entlastet: Ein paar Minuten nicht sitzen, vielleicht etwas an die frische Luft gehen, oder ein paar Minuten dösen. "
+                                 "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro_timer_bot wenden."),
+        ]
+
+
+class QuestionnaireEvaluationExpert:
+    STATE_EXPERTS = {
+        "stress_state": "Stress",
+        "sleepiness_state": "Schlaf",
+        "mental_fatigue_state": MentalFatigueExpert,
+        "energy_state": "Energie", # TODO: Ggf. Energetisch und wach, dafür sleepiness droppen
+        "anxiety_state": "Anstalt"
+    }
+
+    def __init__(self, cengine, key_base):
+        self._cengine = cengine
+        self._key_base = key_base
+
+    def _create_mood_state_statistics(self):
+        mood_states = self._cengine.get_state(self._key_base)
+        mood_states = {key: mood_states[key] for key in mood_states if key in self.STATE_EXPERTS.keys()}
+        avg_mood = round(sum(mood_states.values()) / len(mood_states.values()), 2)
+        most_severe_states = {key: value for key, value in mood_states.items() if value == 5}
+        if not most_severe_states:
+            most_severe_states = {key: value for key, value in mood_states.items() if value == 4}
+        return mood_states, most_severe_states, avg_mood
+
+    def run(self):
+        responses = []
+        mood_states, most_severe_states, avg_mood = self._create_mood_state_statistics()
+
+        if most_severe_states or avg_mood >= 3.75:
+            responses.append(Message(text="Gut, danke"))
+
+            if avg_mood >= 3.75:
+                responses.append(Message(text=f"Mit einem Durchschnitt von {avg_mood}/5 scheinst du deine Situation insgesamt als problematisch eingeschätzt zu haben."))
+                # TODO: Hier, bisschen was dazu sagen entspannt zu machen und die GenericRemedyMessage einfügen
+            else:
+                responses.append(Message(text=f"Mit einem Schnitt von {avg_mood}/5 scheinst du nur einzelne Dimensionen als problematisch eingeschätzt zu haben."))
+
+            if most_severe_states:
+                most_severe_two = random.sample(list(most_severe_states.items()), k=2) \
+                    if len(most_severe_states.items())  >= 2 else list(most_severe_states.items())
+                if avg_mood >= 3.75 and most_severe_two[0][1] == 5:
+                    expert = self.STATE_EXPERTS[most_severe_two[0][0]](self._cengine, self._key_base)
+                    responses.extend(expert.run())
+                else:
+                    for state_pair in most_severe_two:
+                        expert = self.STATE_EXPERTS[state_pair[0]](self._cengine, self._key_base)
+                        responses.extend(expert.run())
+
+        # TODO: Veränderungen zu vormittag / gestern einarbeiten
+
+        responses.reverse()
+        return responses
+
+
 def finalize_questionnaire_callback(key, value, cengine=None, is_multi_answer_finished=False):
     if not is_multi_answer_finished:
         update_state_multi_answer_callback(key, value, cengine, is_multi_answer_finished=is_multi_answer_finished)
         return
 
-    responses = []
-
     key_base = ".".join(key.split(".")[0:2])
-    mood_states = cengine.get_state(key_base)
-    number_keys = ["stress_state", "sleepiness_state", "mental_fatigue_state", "energy_state", "anxiety_state"]
-    mood_states = {key: mood_states[key] for key in mood_states if key in number_keys}
-
-    # TODO evaluate and return list
-    # gibt es ein Problem in einer bestimmten Kategorie oder allgemein?
-    # falls allgemein
-    # lass es ab jetzt lieber etwas langsamer angehen
-    # vielleicht erleichtert eines der fogelnden Dinge die Arbeit:
-    # aufgaben vorschlagen jenachdem welche werte am höchsten sind
-    # falls einzelne Kategorie
-    # konkrete tipps und aufgaben für kategorie
-
-    avg_mood = round(sum(mood_states.values()) / len(mood_states.values()), 2)
-    # get all keys where value is 5
-    most_severe = [key for key, value in mood_states.items() if value == 5]
-    if not most_severe:
-        most_severe = [key for key, value in mood_states.items() if value == 4]
-
-    if avg_mood >= 3.75:
-        responses.append(Message(text=f"Im Mittel ergeben deine Angaben einen Wert von {avg_mood}."))
-        responses.append(Message(text="Du scheinst allgemein nicht so fit zu sein heute, lass es entspannt angehen und mach nicht zu lange."))
-
-    if most_severe:
-        most_severe_shortened = [key.split('.')[-1] for key in most_severe]
-        responses.append(Message(text='Besonders schlimm sind: ' + ', '.join(most_severe_shortened)))
-        pass  # TODO: Hier sollte eine Evaluation kommen was das Problem ist damit konkret darauf eingegangen werden kann
-        # TODO: Auch mit Vorschlägen von Aufgaben
-    else:
-        pass  # TODO: Hier sollten allgemeine Aufgaben/Verhalten vorgeschlagen werden, die vll hilfreich sein könnten
-
-    # TODO Veränderungen zum morgen / gestern einarbeiten
-
-    return responses
+    evaluation_expert = QuestionnaireEvaluationExpert(cengine, key_base)
+    return evaluation_expert.run()
 
 
 def update_reversed_numeric_answer_callback(key, value, cengine=None, is_multi_answer_finished=False):

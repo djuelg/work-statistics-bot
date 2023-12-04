@@ -65,7 +65,8 @@ async def send_next_messages(context, chat_id):
             reply_markup = create_answer_options(message)
 
         await context.bot.send_message(
-            chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup
+            chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
+            parse_mode='markdown'
         )
 
         message.mark_as_sent()
