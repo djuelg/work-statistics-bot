@@ -4,6 +4,7 @@ from collections import deque
 from datetime import datetime
 
 
+CURRENT_CONVERSATION_KEY = "current_conversation"
 DAILY_QUESTIONNAIRE_KEY = 'daily_questionnaire'
 HISTORY_KEY = 'history'
 MULTI_ANSWER_FINISHED = 'Fertig'
@@ -83,6 +84,7 @@ class ConversationEngine:
 
     def begin_new_conversation(self, conversation):
         self.queue.clear()
+        self.drop_state(CURRENT_CONVERSATION_KEY)
         self.queue.extend(conversation)
 
     def next_message(self):
@@ -134,4 +136,5 @@ class ConversationEngine:
         state = self.state
         for key in nested_keys[:-1]:
             state = state.setdefault(key, {})
-        del state[nested_keys[-1]]
+        if nested_keys[-1] in state:
+            del state[nested_keys[-1]]

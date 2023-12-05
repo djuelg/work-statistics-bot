@@ -1,7 +1,6 @@
 from conversation.content.generic_messages import GoodbyeMessage, HelloMessage
 from conversation.content.questionaire_conversation import StressQuestion, \
-    SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, QuestionnaireEvaluationMessage, \
-    EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
+    SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback
 
 KEY_GROUPING_AFTERNOON = 'afternoon'
@@ -20,7 +19,6 @@ def create_afternoon_conversation():
         StressQuestion(KEY_GROUPING_AFTERNOON),
         MoodQuestion(KEY_GROUPING_AFTERNOON),
         TasksQuestion(KEY_GROUPING_AFTERNOON, callback=finalize_questionnaire_callback),
-        # QuestionnaireEvaluationMessage([AFTERNOON_ENERGY_KEY, AFTERNOON_SLEEPINESS_KEY, AFTERNOON_ANXIETY_KEY, AFTERNOON_MENTAL_FATIGUE_KEY, AFTERNOON_STRESS_KEY]),
         GoodbyeMessage()
     ]
 
