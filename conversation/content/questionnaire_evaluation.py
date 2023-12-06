@@ -3,6 +3,8 @@ import random
 from conversation.engine import SingleAnswerMessage, Message
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
+KEY_GROUPING_AFTERNOON = 'afternoon'
+KEY_GROUPING_MORNING = 'morning'
 
 BAD_MOOD_CONSTANT = 4
 GOOD_MOOD_CONSTANT = 2
@@ -24,7 +26,8 @@ class GenericRemedyMessage(Message):
 def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
     if value == WhatElseMessage.CALLBACK_KEY:
         return [
-            GenericRemedyMessage(),
+            Message(text="Meist lohnt es sich ein paar Minuten Arbeitszeit zu opfern und die Aufgaben danach wieder mit einem frischeren Kopf anzugehen"),
+                GenericRemedyMessage(),
             Message(
                 text="In einigen Situation kann auch folgendes hilfreich sein:"),
         ]
@@ -40,10 +43,21 @@ class WhatElseMessage(SingleAnswerMessage):
         super().__init__(text, self.CALLBACK_KEY, callback, self.STATES)
 
 
-class MentalFatigueExpert:
+class GenericExpert:
     def __init__(self, cengine, key_base):
         self._cengine = cengine
         self._key_base = key_base
+
+    def run(self):
+        raise NotImplementedError("Must be implemented by subclass")
+
+    def remedy_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        responses = self.run()
+        responses.reverse()
+        return responses
+
+
+class MentalFatigueExpert(GenericExpert):
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
@@ -60,24 +74,38 @@ class MentalFatigueExpert:
         )
         return responses
 
-    def remedy_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
-        responses = self.run()
-        responses.reverse()
+
+class SleepinessExpert(GenericExpert):
+
+    def run(self):
+        is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
+        introduction = "*Zum Thema wenig Energie und Schläfrigkeit:* \n"
+        if KEY_GROUPING_MORNING in self._key_base:
+            introduction += "Es ist völlig normal und in Ordnung sich am Morgen energielos zu fühlen. "
+        else:
+            introduction += "Sich im Laufe des Tages und vor allem am frühen Nachmittag müde oder energielos zu fühlen ist ganz normal. " \
+                            "Nimm dir für diese Zeit eher leichte Aufgaben vor und lass es entspannt angehen. "
+        introduction += "Denk daran regelmäßig Pausen zu machen und genug zu trinken. " \
+                        "Falls möglich arbeite ein bisschen im Stehen und nutze die Pausen um dich kurz zu bewegen. "
+        responses = [Message(text=introduction)]
+        if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
+            responses.append(Message(text="Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, "
+                     "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen."))
+        else:
+            responses.append(Message(text="Um sie nicht zu vergessen empfehle ich dir die Pomodoro Methode und dafür z.B. den Bot @pomodoro_timer_bot zu nutzen."))
+            responses.append(WhatElseMessage(text="Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, "
+                     "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen. "))
         return responses
 
 
-class QuestionnaireEvaluationExpert:
+class QuestionnaireEvaluationExpert(GenericExpert):
     STATE_EXPERTS = {
         "stress_state": "Stress",
-        "sleepiness_state": "Schlaf",
+        "sleepiness_state": SleepinessExpert,
         "mental_fatigue_state": MentalFatigueExpert,
-        "energy_state": "Energie", # TODO: Ggf. Energetisch und wach, dafür sleepiness droppen
+        "energy_state": SleepinessExpert, # TODO: Ggf. Energetisch und wach, dafür sleepiness droppen
         "anxiety_state": "Anstalt"
     }
-
-    def __init__(self, cengine, key_base):
-        self._cengine = cengine
-        self._key_base = key_base
 
     def _create_mood_state_statistics(self):
         mood_states = self._cengine.get_state(self._key_base)

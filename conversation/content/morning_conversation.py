@@ -1,9 +1,8 @@
 from conversation.content.generic_messages import GoodbyeMessage, MorningMessage
 from conversation.content.questionaire_conversation import StressQuestion, \
     SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
+from conversation.content.questionnaire_evaluation import KEY_GROUPING_MORNING
 from conversation.engine import Message
-
-KEY_GROUPING_MORNING = 'morning'
 
 
 def create_morning_conversation():

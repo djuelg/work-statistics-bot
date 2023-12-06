@@ -1,9 +1,8 @@
 from conversation.content.generic_messages import GoodbyeMessage, HelloMessage
 from conversation.content.questionaire_conversation import StressQuestion, \
     SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
+from conversation.content.questionnaire_evaluation import KEY_GROUPING_AFTERNOON
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback
-
-KEY_GROUPING_AFTERNOON = 'afternoon'
 
 
 def create_afternoon_conversation():
