@@ -9,13 +9,20 @@ KEY_GROUPING_MORNING = 'morning'
 BAD_MOOD_CONSTANT = 4
 GOOD_MOOD_CONSTANT = 2
 
+MATRIX_LINK = "https://www.orghandbuch.de/OHB/DE/OrganisationshandbuchNEU/4_MethodenUndTechniken/Methoden_A_bis_Z/Eisenhower_Matrix/Eisenhower_Matrix_node.html"
+SPORT_LINK = "https://www.youtube.com/results?search_query=5+minute+warmup+tabata"
+YOGA_LINK = "https://www.youtube.com/results?search_query=easy+10+minute+yoga-routine"
+MEDITATION_LINK = "https://www.youtube.com/results?search_query=10+minute+guided+meditation"
+BREATHING_LINK = "https://www.youtube.com/results?search_query=5+minute+breathing+exercise"
+
 
 class GenericRemedyMessage(Message):
     PROMPTS = [
-        "- *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine Sport- oder Yoga-Routine einlegst. \n"
+        f"- *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine [Sport-]({SPORT_LINK}) "
+        f"oder [Yoga-Routine]({YOGA_LINK}) einlegst. \n"
          "- *Sprich mit jemandem:* Führe ein kurzes Gespräch mit jemandem in deiner Nähe, oder rufe Freunde an. \n"
          "- *Schreib deine Gedanken auf:* Falls niemand in der Nähe ist, oder du keine Lust hast deine Situation mit jemandem zu besprechen, kann es auch hilfreich sein, deine Gedanken zu verschriftlichen. \n"
-         "- *Eine Achtsamkeitsübung machen:* Bspw. sich ein paar Momente für Meditation oder Atemübungen zu nehmen \n"
+         f"- *Eine Achtsamkeitsübung machen:* Bspw. sich ein paar Momente für [Meditation]({MEDITATION_LINK}) oder [Atemübungen]({BREATHING_LINK}) zu nehmen \n"
          "- *Mach etwas anderes:* Erledige etwas kleines, wofür du eher die Muße hast und mach danach mit deiner eigentlichen Aufgabe weiter. \n"
     ]
 
@@ -62,8 +69,8 @@ class StressExpert(GenericExpert):
                           "Stress lässt sich natürlich nicht immer vermeiden. " \
                           "Versuche deine Tage in stressigen Phasen pragmatisch zu planen: " \
                           "Kümmere dich zuerst um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst. Das ist in Ordnung. " \
-                          "Bei der Planung kann dir z.B. die [Eisenhower Matrix](youtube.com) helfen"
-    REMEDY_MEDITATION = "Achtsamkeitsübungen können helfen Stress abzubauen. Sie können jedoch auch problematisch sein, " \
+                          f"Bei der Planung kann dir z.B. die [Eisenhower Matrix]({MATRIX_LINK}) helfen"
+    REMEDY_MEDITATION = f"[Achtsamkeitsübungen]({MEDITATION_LINK}) können helfen Stress abzubauen. Sie können jedoch auch problematisch sein, " \
                         "wenn du sie nur als weiteres To-Do in deinem schon vollen Tag betrachtest. Vor dem Arbeitsalltag, " \
                         "oder anstelle von Zeit auf sozialen Medien sind gute Möglichkeiten Achtsamkeitsübungen in den Tag einzubauen."
     REMEDY_RELAX = "Nach der Arbeit solltest du dir möglichst Zeit zur Entspannung nehmen. " \

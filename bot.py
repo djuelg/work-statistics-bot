@@ -66,7 +66,7 @@ async def send_next_messages(context, chat_id):
 
         await context.bot.send_message(
             chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
-            parse_mode='markdown'
+            parse_mode='markdown', disable_web_page_preview=True
         )
 
         message.mark_as_sent()
