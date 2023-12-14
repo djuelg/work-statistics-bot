@@ -57,54 +57,93 @@ class GenericExpert:
         return responses
 
 
-class MentalFatigueExpert(GenericExpert):
+class StressExpert(GenericExpert):
+    STRESS_INTRODUCTION = "*Zum Thema Stress:* \n" \
+                          "Stress lässt sich natürlich nicht immer vermeiden. " \
+                          "Versuche deine Tage in stressigen Phasen pragmatisch zu planen: " \
+                          "Kümmere dich zuerst um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst. Das ist in Ordnung. " \
+                          "Bei der Planung kann dir z.B. die [Eisenhower Matrix](youtube.com) helfen"
+    REMEDY_MEDITATION = "Achtsamkeitsübungen können helfen Stress abzubauen. Sie können jedoch auch problematisch sein, " \
+                        "wenn du sie nur als weiteres To-Do in deinem schon vollen Tag betrachtest. Vor dem Arbeitsalltag, " \
+                        "oder anstelle von Zeit auf sozialen Medien sind gute Möglichkeiten Achtsamkeitsübungen in den Tag einzubauen."
+    REMEDY_RELAX = "Nach der Arbeit solltest du dir möglichst Zeit zur Entspannung nehmen. " \
+                   "Wenn das nicht möglich ist, setze dir doch schonmal eine feste Zeit zum Entspannen in der Zuknft."
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        responses = [Message(text="*Zum Thema mentale Ermüdung:* \n"
-                         "Denk daran, dass mentale Ermüdung durch anhaltende mentale Anstrengungen entsteht. "
-                         "Häufig geht sie mit einem Gefühl von Unlust weiterzumachen einher. "
-                         "Dein Körper versucht also dir zu vermitteln, mehr Pausen einzulegen.")]
+        responses = [Message(text=self.STRESS_INTRODUCTION),
+                     Message(text=self.REMEDY_RELAX)
+                     ]
+
+        # TODO History: Auf andauernden Stress eingehen
+        # TODO Später: Z.B. Fragen ob Achtsamkeitsübungen überhaupt für einen etwas sind
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(text="Lass es ruhig angehen, und mache etwas was dich mental entlastet: Ein paar Minuten nicht sitzen, vielleicht etwas an die frische Luft gehen, oder ein paar Minuten dösen. "
-                                 "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."))
+            responses.append(Message(text=self.REMEDY_MEDITATION))
         else:
-            responses.append(WhatElseMessage(text="Lass es ruhig angehen, und mache etwas was dich mental entlastet: Ein paar Minuten nicht sitzen, vielleicht etwas an die frische Luft gehen, oder ein paar Minuten dösen. "
-                                 "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro_timer_bot wenden."),
-        )
+            responses.append(WhatElseMessage(text=self.REMEDY_MEDITATION))
+        return responses
+
+
+class MentalFatigueExpert(GenericExpert):
+    MENTAL_FATIGUE_INTRODUCTION = "*Zum Thema mentale Ermüdung:* \n" \
+                                  "Denk daran, dass mentale Ermüdung durch anhaltende mentale Anstrengungen entsteht. " \
+                                  "Häufig geht sie mit einem Gefühl von Unlust weiterzumachen einher. " \
+                                  "Dein Körper versucht also dir zu vermitteln, mehr Pausen einzulegen."
+    REMEDY_SLOW_DOWN = "Lass es ruhig angehen, und mache etwas was dich mental entlastet: Ein paar Minuten nicht sitzen, vielleicht etwas an die frische Luft gehen, oder ein paar Minuten dösen. "
+    REMEDY_PAUSES_1 = "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
+    REMEDY_PAUSES_2 = "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+
+    def run(self):
+        is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
+        responses = [Message(text=self.MENTAL_FATIGUE_INTRODUCTION)]
+        if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
+            responses.append(Message(self.REMEDY_SLOW_DOWN + self.REMEDY_PAUSES_1))
+        else:
+            responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN + self.REMEDY_PAUSES_2))
         return responses
 
 
 class SleepinessExpert(GenericExpert):
+    SLEEPINESS_HEADLINE = "*Zum Thema wenig Energie und Schläfrigkeit:* \n"
+    SLEEPINESS_INTRODUCTION_1 = "Es ist völlig normal und in Ordnung sich am Morgen energielos zu fühlen. "
+    SLEEPINESS_INTRODUCTION_2 = "Sich im Laufe des Tages und vor allem am frühen Nachmittag müde oder energielos zu fühlen ist ganz normal. " \
+                                "Nimm dir für diese Zeit eher leichte Aufgaben vor und lass es entspannt angehen. "
+    SLEEPINESS_INTRODUCTION_3 = "Denk daran regelmäßig Pausen zu machen und genug zu trinken. " \
+                                "Falls möglich arbeite ein bisschen im Stehen und nutze die Pausen um dich kurz zu bewegen. "
+    REMEDY_NAP = "Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, " \
+                 "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen."
+    REMEDEY_POMODORO = "Um sie nicht zu vergessen empfehle ich dir die Pomodoro Methode und dafür z.B. den Bot @pomodoro\_timer\_bot zu nutzen."
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        introduction = "*Zum Thema wenig Energie und Schläfrigkeit:* \n"
-        if KEY_GROUPING_MORNING in self._key_base:
-            introduction += "Es ist völlig normal und in Ordnung sich am Morgen energielos zu fühlen. "
-        else:
-            introduction += "Sich im Laufe des Tages und vor allem am frühen Nachmittag müde oder energielos zu fühlen ist ganz normal. " \
-                            "Nimm dir für diese Zeit eher leichte Aufgaben vor und lass es entspannt angehen. "
-        introduction += "Denk daran regelmäßig Pausen zu machen und genug zu trinken. " \
-                        "Falls möglich arbeite ein bisschen im Stehen und nutze die Pausen um dich kurz zu bewegen. "
+        introduction = self.SLEEPINESS_HEADLINE
+        introduction += self.SLEEPINESS_INTRODUCTION_1 if KEY_GROUPING_MORNING in self._key_base \
+            else self.SLEEPINESS_INTRODUCTION_2
+        introduction += self.SLEEPINESS_INTRODUCTION_3
         responses = [Message(text=introduction)]
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(text="Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, "
-                     "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen."))
+            responses.append(Message(text=self.REMEDY_NAP))
         else:
-            responses.append(Message(text="Um sie nicht zu vergessen empfehle ich dir die Pomodoro Methode und dafür z.B. den Bot @pomodoro_timer_bot zu nutzen."))
-            responses.append(WhatElseMessage(text="Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, "
-                     "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen. "))
+            responses.append(Message(text=self.REMEDEY_POMODORO))
+            responses.append(WhatElseMessage(text=self.REMEDY_NAP))
         return responses
 
 
 class QuestionnaireEvaluationExpert(GenericExpert):
+    THANKS = "Gut, danke"
+    HAPPY_RESPONSE = f"Es freut mich, dass es dir relativ gut zu gehen scheint."
+    MEDIOCRE_RESPONSE = "Deine Angaben ergeben einen Durchschnitt von {}/5, wobei nichts besonders problematisch erscheint. Viel Erfolg bei der restlichen Arbeit."
+    SOME_BAD_RESPONSE = "Mit einem Schnitt von {}/5 scheinst du nur einzelne Dimensionen als problematisch eingeschätzt zu haben."
+    BAD_RESPONSE = "Mit einem Durchschnitt von {}/5 scheinst du allgemein in keiner guten Situation zu sein."
+    REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, nicht " \
+                              f"länger als nötig zu arbeiten und dir häufiger mal eine kurze Auszeit zu nehmen. " \
+                              f"Diese kannst du dann z.B. für folgendes nutzen:"
+    REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
+
     STATE_EXPERTS = {
-        "stress_state": "Stress",
-        "sleepiness_state": SleepinessExpert,
+        "stress_state": StressExpert,
         "mental_fatigue_state": MentalFatigueExpert,
-        "energy_state": SleepinessExpert, # TODO: Ggf. Energetisch und wach, dafür sleepiness droppen
-        "anxiety_state": "Anstalt"
+        "energy_state": SleepinessExpert,
     }
 
     def _create_mood_state_statistics(self):
@@ -122,37 +161,30 @@ class QuestionnaireEvaluationExpert(GenericExpert):
         mood_states, most_severe_states, avg_mood, med_mood = self._create_mood_state_statistics()
 
         if not most_severe_states and med_mood < BAD_MOOD_CONSTANT:
-            responses.append(Message(text="Gut, danke"))
+            responses.append(Message(text=self.THANKS))
             if med_mood <= GOOD_MOOD_CONSTANT:
-                responses.append(Message(text=f"Es freut mich, dass es dir relativ gut zu gehen scheint."))
+                responses.append(Message(text=self.HAPPY_RESPONSE))
             else:
-                responses.append(Message(text=f"Deine Angaben ergeben einen Durchschnitt von {med_mood}/5, wobei nichts besonders problematisch erscheint. Viel Erfolg bei der restlichen Arbeit."))
+                responses.append(Message(text=self.MEDIOCRE_RESPONSE.format(med_mood)))
         elif most_severe_states or med_mood >= BAD_MOOD_CONSTANT:
             most_severe_two = random.sample(list(most_severe_states.items()), k=2) \
                 if len(most_severe_states.items()) >= 2 else list(most_severe_states.items())
-            responses.append(Message(text="Gut, danke"))
+            responses.append(Message(text=self.THANKS))
 
             if med_mood >= BAD_MOOD_CONSTANT:
-                responses.append(Message(text=f"Mit einem Durchschnitt von {med_mood}/5 scheinst du allgemein in keiner guten Situation zu sein."))
-                responses.append(Message(text=f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, nicht "
-                                              f"länger als nötig zu arbeiten und dir häufiger mal eine kurze Auszeit zu nehmen. "
-                                              f"Diese kannst du dann z.B. für folgendes nutzen:"))
+                responses.append(Message(text=self.BAD_RESPONSE.format(med_mood)))
+                responses.append(Message(text=self.REMEDY_LOW_EXPECTATIONS))
                 responses.append(GenericRemedyMessage())
 
                 if most_severe_two and most_severe_two[0][1] == 5:
                     expert = self.STATE_EXPERTS[most_severe_two[0][0]](self._cengine, self._key_base)
-                    responses.append(WhatElseMessage(
-                        text=f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro_timer_bot",
-                        callback=expert.remedy_callback
-                    ))
+                    responses.append(WhatElseMessage(text=self.REMEDEY_POMODORO, callback=expert.remedy_callback))
                 else:
-                    responses.append(Message(
-                        text=f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro_timer_bot"
-                    ))
+                    responses.append(Message(text=self.REMEDEY_POMODORO))
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
 
             else:
-                responses.append(Message(text=f"Mit einem Schnitt von {med_mood}/5 scheinst du nur einzelne Dimensionen als problematisch eingeschätzt zu haben."))
+                responses.append(Message(text=self.SOME_BAD_RESPONSE.format(med_mood)))
 
                 if most_severe_two:
                     if med_mood >= BAD_MOOD_CONSTANT and most_severe_two[0][1] == 5:

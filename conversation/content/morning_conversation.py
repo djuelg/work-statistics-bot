@@ -1,6 +1,6 @@
 from conversation.content.generic_messages import GoodbyeMessage, MorningMessage
 from conversation.content.questionaire_conversation import StressQuestion, \
-    SleepinessQuestion, MentalFatigueQuestion, MoodQuestion, EnergyQuestion, AnxietyQuestion, TasksQuestion, finalize_questionnaire_callback
+    MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback
 from conversation.content.questionnaire_evaluation import KEY_GROUPING_MORNING
 from conversation.engine import Message
 
@@ -11,10 +11,9 @@ def create_morning_conversation():
         TasksQuestion(KEY_GROUPING_MORNING),
         QuestionnaireIntroductionMessage(),
         EnergyQuestion(KEY_GROUPING_MORNING),
-        SleepinessQuestion(KEY_GROUPING_MORNING),
-        AnxietyQuestion(KEY_GROUPING_MORNING),
-        MentalFatigueQuestion(KEY_GROUPING_MORNING),
+        # AnxietyQuestion(KEY_GROUPING_MORNING),
         StressQuestion(KEY_GROUPING_MORNING),
+        MentalFatigueQuestion(KEY_GROUPING_MORNING),
         MoodQuestion(KEY_GROUPING_MORNING, callback=finalize_questionnaire_callback),
         GoodbyeMessage()
     ]
