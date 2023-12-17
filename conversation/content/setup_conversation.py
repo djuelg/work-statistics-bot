@@ -45,8 +45,8 @@ class NameQuestion(AnswerableMessage):
 
 class NameAnswerMessage(Message):
     PROMPTS = [
-        "Alles klar. Ist notiert! Ich werde mich ab jetzt 2-3 mal pro Tag melden, um herauszufinden wie es dir geht :)",
-        "Okay, ist notiert! Ich werde mich ab jetzt 2-3 mal pro Tag melden, um herauszufinden wie es dir geht :)",
+        "Alles klar. Ist notiert! Unter der Woche werde ich mich ab jetzt 2-3 mal pro Tag melden, um herauszufinden wie es dir geht :)",
+        "Okay, ist notiert! Unter der Woche werde ich mich ab jetzt 2-3 mal pro Tag melden, um herauszufinden wie es dir geht :)",
     ]
 
     def __init__(self):

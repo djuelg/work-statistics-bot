@@ -106,6 +106,7 @@ class ConversationEngine:
         date_key = str(datetime.today().date())
         today_data = copy.deepcopy(self.get_state(DAILY_QUESTIONNAIRE_KEY))
         self.update_state(HISTORY_KEY, {date_key: today_data})
+        self.drop_state(DAILY_QUESTIONNAIRE_KEY)
 
     def get_state(self, key):
         nested_keys = key.split('.')

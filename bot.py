@@ -137,7 +137,7 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     job_queue.run_daily(jobqueue_callback, afternoon_time, chat_id=chat_id, name=afternoon_job_name,
                         days=DAYS_MON_FRI, data=job_data, job_kwargs={'id': afternoon_job_name, 'replace_existing': True})
     job_queue.run_daily(jobqueue_callback, evening_time, chat_id=chat_id, name=evening_job_name,
-                        days=DAYS_MON_FRI, data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
+                        data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
 
 
 async def jobqueue_callback(context: ContextTypes.user_data) -> None:
@@ -149,7 +149,7 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
         conversation = create_afternoon_conversation()
     elif context.job.name == f"{context.job.chat_id}_evening_message":
         cengine.copy_today_to_history()
-        conversation = []  # TODO Later create evening statistics
+        conversation = []  # TODO Later create evening statistics, if day has data. Maybe reflect here on history?
     else:
         return
 
