@@ -23,7 +23,7 @@ def create_afternoon_conversation():
 
 class QuestionnaireIntroductionMessage(Message):
     PROMPTS = [
-        "Mal sehen wie sich deine Selbsteinschätzung gegenüber heute morgen verändert hat. "
+        "Mal sehen wie sich deine Selbsteinschätzung jetzt zum Nachmittag entwickelt hat. "
         "Bitte bewerte die folgenden Aussagen auf"
         "einer Skala von '1 - trifft gar nicht zu' bis '5 - trifft vollkommen zu'."
     ]
