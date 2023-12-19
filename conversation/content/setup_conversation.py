@@ -1,5 +1,5 @@
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback, AnswerableMessage, \
-    MultiAnswerMessage
+    MultiAnswerMessage, update_state_multi_answer_callback
 
 
 def create_setup_conversation(first_met=True):
@@ -10,6 +10,7 @@ def create_setup_conversation(first_met=True):
         NameAnswerMessage(),
         WorkBeginQuestion(),
         MultiAnswerExampleMessage(),
+        MultiAnswerExampleReaction(),
         SetupWrapupMessage()
     ]
 
@@ -83,11 +84,9 @@ class WorkBeginQuestion(SingleAnswerMessage):
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, update_state_single_answer_callback, self.STATES)
 
 
-def no_op_callback(key, value, cengine=None, is_multi_answer_finished=False):
-    pass
-
-
 class MultiAnswerExampleMessage(MultiAnswerMessage):
+    LOOKING_FORWARD_KEY = "current_conversation.looking_forward_to"
+
     PROMPTS = [
         "Manchmal stelle ich Fragen bei denen du zum einen Mehrere und zum Anderen eigene Antworten geben kannst. "
         "Eigene Antworten kannst du einfach per Chat senden. Wenn du alle gewünschten Antworten gewählt hast, "
@@ -99,7 +98,20 @@ class MultiAnswerExampleMessage(MultiAnswerMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS, "NO_OP", no_op_callback, self.STATES)
+        super().__init__(self.PROMPTS, self.LOOKING_FORWARD_KEY, update_state_multi_answer_callback, self.STATES)
+
+
+class MultiAnswerExampleReaction(Message):
+    CALLBACK_KEY = "current_conversation.looking_forward_to"
+
+    def __init__(self):
+        super().__init__("")
+
+    def content(self, cengine=None):
+        looking_forward_items = cengine.get_state(self.CALLBACK_KEY)
+        looking_forward_items = list(set(looking_forward_items)) or ["Anscheinend nichts"]
+        self._content.text = f"Du freust dich auf: {', '.join(looking_forward_items)}"
+        return self._content
 
 
 class SetupWrapupMessage(Message):
