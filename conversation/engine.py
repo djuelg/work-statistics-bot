@@ -40,6 +40,11 @@ class Message:
         return self._sent
 
 
+class StickerMessage(Message):
+    def __init__(self, sticker_id):
+        super(Message, self).__init__(sticker_id)
+
+
 class AnswerableMessage(Message):
 
     def __init__(self, text, callback_key, callback, predefined_answers=None):

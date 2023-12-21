@@ -1,4 +1,4 @@
-from conversation.content.generic_messages import GoodbyeMessage, HelloMessage
+from conversation.content.generic_messages import GoodbyeMessage, HelloMessage, WavingCatSticker
 from conversation.content.questionaire_conversation import StressQuestion, \
     MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback
 from conversation.content.questionnaire_evaluation import KEY_GROUPING_AFTERNOON
@@ -17,6 +17,7 @@ def create_afternoon_conversation():
         MentalFatigueQuestion(KEY_GROUPING_AFTERNOON),
         MoodQuestion(KEY_GROUPING_AFTERNOON),  # TODO: Ggf. allgemeine happiness Question
         TasksQuestion(KEY_GROUPING_AFTERNOON, callback=finalize_questionnaire_callback),
+        WavingCatSticker(),
         GoodbyeMessage()
     ]
 

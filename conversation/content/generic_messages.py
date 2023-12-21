@@ -1,6 +1,6 @@
 import random
 
-from conversation.engine import Message
+from conversation.engine import Message, StickerMessage
 
 NAME_KEY = 'username'
 
@@ -18,6 +18,20 @@ class HelloMessage(Message):
         name = " " + cengine.get_state(NAME_KEY) if random.random() <= 0.2 else ""
         self._content.text = self._content.text.format(name)
         return self._content
+
+
+class ThumbsUpCatSticker(StickerMessage):
+    ID = "CAACAgIAAxkBAAEoYeNlhK4C3Eqmy297ceXoI6W1E5KnPAACP0YAAg_EKEh1NETO709qWDME"
+
+    def __init__(self):
+        super(StickerMessage, self).__init__(self.ID)
+
+
+class WavingCatSticker(StickerMessage):
+    ID = "CAACAgIAAxkBAAEoYcNlhKgRGBOYzALHxGMGkThWelkThQACaUMAAmBJKUgZplO_8QeEJDME"
+
+    def __init__(self):
+        super(StickerMessage, self).__init__(self.ID)
 
 
 class GoodbyeMessage(Message):

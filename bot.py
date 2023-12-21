@@ -12,7 +12,7 @@ from conversation.content.afternoon_conversation import create_afternoon_convers
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
-    MULTI_ANSWER_FINISHED
+    MULTI_ANSWER_FINISHED, StickerMessage
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
 TZ_DE = 'Europe/Berlin'
@@ -63,10 +63,13 @@ async def send_next_messages(bot, cengine, chat_id):
         if isinstance(message, SingleAnswerMessage) or isinstance(message, MultiAnswerMessage):
             reply_markup = create_answer_options(message, cengine=cengine)
 
-        await bot.send_message(
-            chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
-            parse_mode='markdown', disable_web_page_preview=True
-        )
+        if isinstance(message, StickerMessage):
+            await bot.send_sticker(chat_id=chat_id, sticker=message.content().text)
+        else:
+            await bot.send_message(
+                chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
+                parse_mode='markdown', disable_web_page_preview=True
+            )
 
         message.mark_as_sent()
         if isinstance(message, AnswerableMessage):

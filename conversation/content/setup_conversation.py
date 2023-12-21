@@ -1,3 +1,4 @@
+from conversation.content.generic_messages import ThumbsUpCatSticker
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback, AnswerableMessage, \
     MultiAnswerMessage, update_state_multi_answer_callback
 
@@ -11,6 +12,7 @@ def create_setup_conversation(first_met=True):
         WorkBeginQuestion(),
         MultiAnswerExampleMessage(),
         MultiAnswerExampleReaction(),
+        ThumbsUpCatSticker(),
         SetupWrapupMessage()
     ]
 
