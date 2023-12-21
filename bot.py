@@ -46,9 +46,9 @@ def create_button(data):
     return InlineKeyboardButton(content[0], callback_data=content[1])
 
 
-def create_answer_options(message):
+def create_answer_options(message, cengine=None):
     buttons_1d, buttons_2d = [], []
-    for row in message.content().predefined_answers:
+    for row in message.content(cengine=cengine).predefined_answers:
         if isinstance(row, list):
             buttons_2d.append([create_button(button_text) for button_text in row])
         else:
@@ -61,7 +61,7 @@ async def send_next_messages(bot, cengine, chat_id):
         message = cengine.next_message()
         reply_markup = None
         if isinstance(message, SingleAnswerMessage) or isinstance(message, MultiAnswerMessage):
-            reply_markup = create_answer_options(message)
+            reply_markup = create_answer_options(message, cengine=cengine)
 
         await bot.send_message(
             chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,

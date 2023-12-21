@@ -4,6 +4,7 @@ from collections import deque
 from datetime import datetime
 
 
+KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
 DAILY_QUESTIONNAIRE_KEY = 'daily_questionnaire'
 HISTORY_KEY = 'history'
@@ -74,6 +75,18 @@ def update_state_multi_answer_callback(key, value, cengine=None, is_multi_answer
     if not is_multi_answer_finished:
         value = float(value) if value.isnumeric() else value
         cengine.append_state(key, value)
+        cengine.update_recently_used_values(key, value)
+
+
+def extend_predefined_with_recent_items(question_key, cengine, predefined_answers):
+    recent_key = f'{KEY_GROUPING_RECENTLY}.{question_key.split(".")[-1]}'
+    recent_items = cengine.get_state(recent_key) or []
+    flattened_answers = [item for sublist in predefined_answers for item in sublist]
+    recent_items = [item for item in recent_items if item not in flattened_answers]
+    recent_three = recent_items[:min(3, len(recent_items))]
+    if recent_three:
+        predefined_answers.insert(0, recent_three)
+    return predefined_answers
 
 
 class ConversationEngine:
@@ -107,6 +120,13 @@ class ConversationEngine:
         today_data = copy.deepcopy(self.get_state(DAILY_QUESTIONNAIRE_KEY))
         self.update_state(HISTORY_KEY, {date_key: today_data})
         self.drop_state(DAILY_QUESTIONNAIRE_KEY)
+
+    def update_recently_used_values(self, key, value, recent_size=10):
+        recent_key = f'{KEY_GROUPING_RECENTLY}.{key.split(".")[-1]}'
+        recent_items = self.get_state(recent_key) or []
+        recent_items.insert(0, value)
+        recent_items = list(set(recent_items))[:min(recent_size, len(recent_items))]
+        self.update_state(recent_key, recent_items)
 
     def get_state(self, key):
         nested_keys = key.split('.')
