@@ -115,10 +115,9 @@ class ConversationEngine:
             self.queue.extendleft(answers)
 
     def copy_today_to_history(self):
-        datetime.today().date()
-        date_key = str(datetime.today().date())
+        date_key = f'{HISTORY_KEY}.{datetime.today().date()}'
         today_data = copy.deepcopy(self.get_state(DAILY_QUESTIONNAIRE_KEY))
-        self.update_state(HISTORY_KEY, {date_key: today_data})
+        self.update_state(date_key, today_data)
         self.drop_state(DAILY_QUESTIONNAIRE_KEY)
 
     def update_recently_used_values(self, key, value, recent_size=10):
