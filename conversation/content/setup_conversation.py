@@ -29,10 +29,8 @@ class FirstMetMessage(Message):
 
 class IntroductionMessage(Message):
     PROMPTS = [
-        "Ich bin ein Bot, der mit dir erfasst, woran du tagtäglich arbeitest und in welcher Verfassung "
-        "du dabei bist. Das kann dabei helfen, ein Gefühl für Stimmungslagen zu entwickeln, Probleme im Alltag"
-        "besser als solche zu identifizieren und Zusammenhänge von Stimmungen und deren Ursachen besser zu erkennen. "
-        "So gesehen eine kleine fortlaufende Retrospektive. "
+        "Ich bin ein Bot, der mit dir erfasst, woran du tagtäglich arbeitest und in welcher Verfassung du dabei bist. Denn psychische Belastungen, wie etwa Stress, oder geistige Erschöpfung, sollten nicht einfach hingenommen, sondern im Arbeitsalltag berücksichtigt werden. \n"
+        "Indem ich mich regelmäßig bei dir melde, versuche ich kleine Momente des Innehaltens zu schaffen: Der Mensch unterliegt wechselnder Energiereserven und Konzentrationsfähigkeit. Dies zu berücksichtigen und empathisch mit sich selbst zu sein, kann dabei helfen, mit Belastungen im Alltag besser umzugehen und ein Gefühl für die eigenen Stimmungslagen zu entwickeln."
     ]
 
     def __init__(self):
@@ -90,7 +88,7 @@ class MultiAnswerExampleMessage(MultiAnswerMessage):
     LOOKING_FORWARD_KEY = "current_conversation.looking_forward_to"
 
     PROMPTS = [
-        "Manchmal stelle ich Fragen bei denen du zum einen Mehrere und zum Anderen eigene Antworten geben kannst. "
+        "Manchmal stelle ich Fragen bei denen du zum einen _mehrere_ und zum Anderen _eigene_ Antworten geben kannst. "
         "Eigene Antworten kannst du einfach per Chat senden. Wenn du alle gewünschten Antworten gewählt hast, "
         "klicke auf Fertig damit es weiter geht. Als Beispiel: Worauf freust du dich heute noch?",
     ]

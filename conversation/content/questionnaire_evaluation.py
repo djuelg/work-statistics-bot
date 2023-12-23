@@ -138,15 +138,21 @@ class SleepinessExpert(GenericExpert):
 
 class QuestionnaireEvaluationExpert(GenericExpert):
     THANKS = "Gut, danke"
-    HAPPY_RESPONSE = f"Es freut mich, dass es dir relativ gut zu gehen scheint."
-    MEDIOCRE_RESPONSE = "Deine Angaben ergeben einen Durchschnitt von {}/5, wobei nichts besonders problematisch erscheint. Viel Erfolg bei der restlichen Arbeit."
-    SOME_BAD_RESPONSE = "Mit einem Schnitt von {}/5 scheinst du nur einzelne Dimensionen als problematisch eingeschätzt zu haben."
-    BAD_RESPONSE = "Mit einem Durchschnitt von {}/5 scheinst du allgemein in keiner guten Situation zu sein."
+    HAPPY_RESPONSE = f"Es freut mich, dass es dir relativ gut zu gehen scheint! Dann will ich gar nicht weiter stören."
+    MEDIOCRE_RESPONSE = "Deine Angaben sind mit einem Durchschnitt von {}/5 im mittleren Bereich, wobei nichts besonders problematisch erscheint. " \
+                        "Wenn du dich nicht in Topform fühlst, lass es einfach etwas ruhiger angehen. Viel Erfolg bei der restlichen Arbeit."
+    SOME_BAD_RESPONSE = "Deine Bewertung ergibt einen Durchschnitt von {}/5, und es lässt sich erkennen, dass du bestimmte Aspekte des Tages als anspruchsvoll empfunden hast."
+    BAD_RESPONSE = "Der Durchschnitt von {}/5 deutet darauf hin, dass es dir allgemein nicht so gut zu gehen scheint."
     REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, nicht " \
                               f"länger als nötig zu arbeiten und dir häufiger mal eine kurze Auszeit zu nehmen. " \
                               f"Diese kannst du dann z.B. für folgendes nutzen:"
     REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
 
+    STATE_NAMES = {
+        "stress_state": "Stress Level",
+        "mental_fatigue_state": "Mentale Ermüdung",
+        "energy_state": "Schläfrigkeit",
+    }
     STATE_EXPERTS = {
         "stress_state": StressExpert,
         "mental_fatigue_state": MentalFatigueExpert,
@@ -163,12 +169,20 @@ class QuestionnaireEvaluationExpert(GenericExpert):
             most_severe_states = {key: value for key, value in mood_states.items() if value == 4}
         return mood_states, most_severe_states, avg_mood, med_mood
 
+    def short_evaluation(self, mood_states):
+        answer = f"*Zusammengefasst waren deine Angaben:* \n"
+        for key, value in mood_states.items():
+            answer += f"{self.STATE_NAMES[key]}: *{int(value)}*/5 \n"
+        return answer
+
+
     def run(self):
         responses = []
         mood_states, most_severe_states, avg_mood, med_mood = self._create_mood_state_statistics()
 
         if not most_severe_states and med_mood < BAD_MOOD_CONSTANT:
             responses.append(Message(text=self.THANKS))
+            responses.append(Message(text=self.short_evaluation(mood_states)))
             if med_mood <= GOOD_MOOD_CONSTANT:
                 responses.append(Message(text=self.HAPPY_RESPONSE))
             else:
@@ -177,6 +191,7 @@ class QuestionnaireEvaluationExpert(GenericExpert):
             most_severe_two = random.sample(list(most_severe_states.items()), k=2) \
                 if len(most_severe_states.items()) >= 2 else list(most_severe_states.items())
             responses.append(Message(text=self.THANKS))
+            responses.append(Message(text=self.short_evaluation(mood_states)))
 
             if med_mood >= BAD_MOOD_CONSTANT:
                 responses.append(Message(text=self.BAD_RESPONSE.format(med_mood)))

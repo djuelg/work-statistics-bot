@@ -4,7 +4,6 @@ from conversation.engine import Message, StickerMessage
 
 NAME_KEY = 'username'
 
-
 class HelloMessage(Message):
     PROMPTS = [
         "Hey{}! Ich bins wieder.",
@@ -33,6 +32,11 @@ class WavingCatSticker(StickerMessage):
     def __init__(self):
         super(StickerMessage, self).__init__(self.ID)
 
+class ByeCatSticker(StickerMessage):
+    ID = "CAACAgIAAxkBAAEoaJdlhxeWjLMTKwySrHEBZHN2daALxAACIkQAAgnJIEiTYD5CYYFWczME"
+
+    def __init__(self):
+        super(StickerMessage, self).__init__(self.ID)
 
 class GoodbyeMessage(Message):
     PROMPTS = [

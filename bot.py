@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
     CallbackQueryHandler, PicklePersistence, Application
 
 from conversation.content.afternoon_conversation import create_afternoon_conversation
+from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
@@ -26,6 +27,10 @@ if not BOT_TOKEN:
 KEY_AFTERNOON_QUESTIONNAIRE = 'daily_questionnaire.afternoon'
 KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
 
+MORNING_JOB = "{}_morning_message"
+AFTERNOON_JOB = "{}_afternoon_message"
+EVENING_JOB = "{}_evening_message"
+JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB]
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -83,9 +88,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_sticker(chat_id=update.effective_chat.id, sticker=ByeCatSticker.ID)
     await context.bot.send_message(
-        chat_id=update.effective_chat.id, text='Daten werden zurückgesetzt.'
+        chat_id=update.effective_chat.id, text='Schade, dass du gehst. Falls du den Bot wieder nutzen möchtest, kannst du das mit `/start` tun. Deine Daten werden jedoch nun zurückgesetzt.'
     )
+
+    current_jobs = [job for job_name in JOB_NAMES for job in
+                    context.job_queue.get_jobs_by_name(job_name.format(update.effective_chat.id))]
+    for job in current_jobs:
+        job.schedule_removal()
     del context.user_data[CENGINE]
 
 
@@ -123,15 +134,15 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))
     # morning_time = datetime.now() + timedelta(seconds=10)  # debug override
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)
-    morning_job_name = f"{chat_id}_morning_message"
+    morning_job_name = MORNING_JOB.format(chat_id)
 
     afternoon_time = morning_time + timedelta(hours=4, minutes=15)
     # afternoon_time = morning_time + timedelta(seconds=30) # debug override
-    afternoon_job_name = f"{chat_id}_afternoon_message"
+    afternoon_job_name = AFTERNOON_JOB.format(chat_id)
 
     evening_time = morning_time.replace(hour=19, minute=37)
     # evening_time = morning_time + timedelta(seconds=50) # debug override
-    evening_job_name = f"{chat_id}_evening_message"
+    evening_job_name = EVENING_JOB.format(chat_id)
 
     job_data = (application, context, cengine)
     job_queue = job_queue or context.job_queue
@@ -146,11 +157,11 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
 async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     application, passed_context, cengine = context.job.data
 
-    if context.job.name == f"{context.job.chat_id}_morning_message":
+    if context.job.name == MORNING_JOB.format(context.job.chat_id):
         conversation = create_morning_conversation()
-    elif context.job.name == f"{context.job.chat_id}_afternoon_message":
+    elif context.job.name == AFTERNOON_JOB.format(context.job.chat_id):
         conversation = create_afternoon_conversation()
-    elif context.job.name == f"{context.job.chat_id}_evening_message":
+    elif context.job.name == EVENING_JOB.format(context.job.chat_id):
         cengine.copy_today_to_history()
         conversation = []  # TODO Later create evening statistics, if day has data. Maybe reflect here on history?
     else:
