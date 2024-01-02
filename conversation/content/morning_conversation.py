@@ -5,7 +5,6 @@ from conversation.content.questionnaire_evaluation import KEY_GROUPING_MORNING
 from conversation.engine import Message
 
 
-
 def create_morning_conversation():
     return [
         MorningMessage(),
@@ -24,7 +23,7 @@ def create_morning_conversation():
 class QuestionnaireIntroductionMessage(Message):
     PROMPTS = [
         "Lass uns durch ein paar Aussagen deinen aktuellen Blick auf die Welt einordnen. Bewerte diese bitte auf "
-        "einer Skala von '1 - trifft gar nicht zu' bis '5 - trifft vollkommen zu'.",
+        "einer Skala von *Eins* ➔ _\"trifft gar nicht zu\"_ bis *Fünf* ➔ _\"trifft vollkommen zu\"_.",
     ]
 
     def __init__(self):

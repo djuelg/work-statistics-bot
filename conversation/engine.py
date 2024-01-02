@@ -48,9 +48,9 @@ class StickerMessage(Message):
 class AnswerableMessage(Message):
 
     def __init__(self, text, callback_key, callback, predefined_answers=None):
+        super(AnswerableMessage, self).__init__(text)
         self.callback_key = callback_key
         self._callback = callback
-        super(AnswerableMessage, self).__init__(text)
         self._content = MessageContent(text=text, predefined_answers=predefined_answers)
 
     def handle_user_input(self, response, cengine=None, is_multi_answer_finished=False):
@@ -76,10 +76,10 @@ def update_state_single_answer_callback(key, value, cengine=None, is_multi_answe
         cengine.update_state(key, value)
 
 
-def update_state_multi_answer_callback(key, value, cengine=None, is_multi_answer_finished=False):
+def update_state_multi_answer_callback(key, value, cengine=None, remove_duplicates=True, is_multi_answer_finished=False):
     if not is_multi_answer_finished:
         value = float(value) if value.isnumeric() else value
-        cengine.append_state(key, value)
+        cengine.append_state(key, value, remove_duplicates=remove_duplicates)
         cengine.update_recently_used_values(key, value)
 
 
@@ -148,7 +148,7 @@ class ConversationEngine:
             state = state.setdefault(key, {})
         state[nested_keys[-1]] = value
 
-    def append_state(self, key, value):
+    def append_state(self, key, value, remove_duplicates=True):
         nested_keys = key.split('.')
         state = self.state
         for key in nested_keys[:-1]:
@@ -156,7 +156,8 @@ class ConversationEngine:
 
         if nested_keys[-1] not in state:
             state[nested_keys[-1]] = []
-        state[nested_keys[-1]].append(value)
+        if not remove_duplicates or value not in state[nested_keys[-1]]:
+            state[nested_keys[-1]].append(value)
 
     def drop_state(self, key):
         nested_keys = key.split('.')

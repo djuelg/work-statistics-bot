@@ -69,7 +69,7 @@ class StressExpert(GenericExpert):
                           "Stress lässt sich natürlich nicht immer vermeiden. " \
                           "Versuche deine Tage in stressigen Phasen pragmatisch zu planen: " \
                           "Kümmere dich zuerst um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst. Das ist in Ordnung. " \
-                          f"Bei der Planung kann dir z.B. die [Eisenhower Matrix]({MATRIX_LINK}) helfen"
+                          f"Bei der Planung kann dir z.B. eine To-Do Liste oder die [Eisenhower Matrix]({MATRIX_LINK}) helfen"
     REMEDY_MEDITATION = f"[Achtsamkeitsübungen]({MEDITATION_LINK}) können helfen Stress abzubauen. Sie können jedoch auch problematisch sein, " \
                         "wenn du sie nur als weiteres To-Do in deinem schon vollen Tag betrachtest. Vor dem Arbeitsalltag, " \
                         "oder anstelle von Zeit auf sozialen Medien sind gute Möglichkeiten Achtsamkeitsübungen in den Tag einzubauen."

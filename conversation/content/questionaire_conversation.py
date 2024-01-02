@@ -1,3 +1,5 @@
+import copy
+
 from conversation.content.questionnaire_evaluation import QuestionnaireEvaluationExpert
 from conversation.engine import SingleAnswerMessage, MultiAnswerMessage, update_state_multi_answer_callback, \
     update_state_single_answer_callback, extend_predefined_with_recent_items
@@ -24,7 +26,7 @@ class TasksQuestion(MultiAnswerMessage):
     ]
 
     def __init__(self, key_grouping, callback=update_state_multi_answer_callback):
-        super(TasksQuestion, self).__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
+        super(TasksQuestion, self).__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, copy.deepcopy(self.STATES))
 
     def content(self, cengine=None):
         self._content.predefined_answers = extend_predefined_with_recent_items(self.CALLBACK_KEY, cengine, self._content.predefined_answers)
@@ -110,7 +112,7 @@ class MoodQuestion(MultiAnswerMessage):
     ]
 
     def __init__(self, key_grouping, callback=update_state_multi_answer_callback):
-        super().__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, copy.deepcopy(self.STATES))
 
     def content(self, cengine=None):
         self._content.predefined_answers = extend_predefined_with_recent_items(self.CALLBACK_KEY, cengine, self._content.predefined_answers)

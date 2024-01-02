@@ -25,8 +25,8 @@ def create_afternoon_conversation():
 class QuestionnaireIntroductionMessage(Message):
     PROMPTS = [
         "Mal sehen wie sich deine Selbsteinschätzung jetzt zum Nachmittag entwickelt hat. "
-        "Bitte bewerte die folgenden Aussagen auf"
-        "einer Skala von '1 - trifft gar nicht zu' bis '5 - trifft vollkommen zu'."
+        "Bitte bewerte die folgenden Aussagen auf einer Skala von "
+        "*Eins* ➔ _\"trifft gar nicht zu\"_ bis *Fünf* ➔ _\"trifft vollkommen zu\"_."
     ]
 
     def __init__(self):

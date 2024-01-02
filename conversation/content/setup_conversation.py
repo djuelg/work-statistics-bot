@@ -1,3 +1,5 @@
+import copy
+
 from conversation.content.generic_messages import ThumbsUpCatSticker
 from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback, AnswerableMessage, \
     MultiAnswerMessage, update_state_multi_answer_callback
@@ -98,7 +100,7 @@ class MultiAnswerExampleMessage(MultiAnswerMessage):
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS, self.LOOKING_FORWARD_KEY, update_state_multi_answer_callback, self.STATES)
+        super().__init__(self.PROMPTS, self.LOOKING_FORWARD_KEY, update_state_multi_answer_callback, copy.deepcopy(self.STATES))
 
 
 class MultiAnswerExampleReaction(Message):
