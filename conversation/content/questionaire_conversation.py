@@ -97,6 +97,18 @@ class MentalFatigueQuestion(SingleAnswerMessage):
         super().__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
 
 
+class MotivationQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.{}.motivation_state'
+
+    PROMPTS = [
+        "Ich fühle mich motiviert. "
+    ]
+    STATES = ["1", "2", "3", "4", "5"]
+
+    def __init__(self, key_grouping, callback=update_reversed_numeric_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY.format(key_grouping), callback, self.STATES)
+
+
 class MoodQuestion(MultiAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.{}.mood_state'
     PROMPTS = [

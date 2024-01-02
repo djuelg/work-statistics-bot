@@ -136,6 +136,28 @@ class SleepinessExpert(GenericExpert):
         return responses
 
 
+class DemotivationExpert(GenericExpert):
+    DEMOTIVATION_INTRODUCTION = "*Zum Thema wenig Motivation und Unlust:* \n" \
+                                  "Unmotiviertheit kann herausfordernd sein, aber es gibt Ansätze, die dir helfen können." \
+                                " Zunächst einmal ist es wichtig zu verstehen, warum du dich unmotiviert fühlst. " \
+                                "Ist es z.B. die aktuelle Aufgabe auf die du keine Lust hast? " \
+                                "Dann mach dir bewusst, warum es wichtig ist, die Aufgabe zu erledigen, und welchen langfristigen Nutzen sie für dich haben kann."
+    REMEDY_CELEBRATE = "Nicht für jeden Aspekt deines Alltags intrinsische Motivation zu haben ist normal. Daher kann es hilfreich sein, realistische, erreichbare Ziele zu setzen, die aus kleinen Schritten bestehen. " \
+                       "Für jeden erreichten Schritt kannst du dich belohnen, " \
+                       "z.B. indem du dir Zeit für ein Hobby nimmst, dich mit Freunden austauschst, oder dir dein Lieblingsessen gönnst. "
+    REMEDY_PAUSES_1 = "Wenn du unmotiviert bist, kann es auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
+    REMEDY_PAUSES_2 = "Wenn du unmotiviert bist, kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+
+    def run(self):
+        is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
+        responses = [Message(text=self.DEMOTIVATION_INTRODUCTION)]
+        if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
+            responses.append(Message(self.REMEDY_CELEBRATE + self.REMEDY_PAUSES_1))
+        else:
+            responses.append(WhatElseMessage(self.REMEDY_CELEBRATE + self.REMEDY_PAUSES_2))
+        return responses
+
+
 class QuestionnaireEvaluationExpert(GenericExpert):
     THANKS = "Gut, danke"
     HAPPY_RESPONSE = f"Es freut mich, dass es dir relativ gut zu gehen scheint! Dann will ich gar nicht weiter stören."
@@ -152,11 +174,13 @@ class QuestionnaireEvaluationExpert(GenericExpert):
         "stress_state": "Stress Level",
         "mental_fatigue_state": "Mentale Ermüdung",
         "energy_state": "Schläfrigkeit",
+        "motivation_state": "Unlust",
     }
     STATE_EXPERTS = {
         "stress_state": StressExpert,
         "mental_fatigue_state": MentalFatigueExpert,
         "energy_state": SleepinessExpert,
+        "motivation_state": DemotivationExpert,
     }
 
     def _create_mood_state_statistics(self):
