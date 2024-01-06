@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 import pytz
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, \
     CallbackQueryHandler, PicklePersistence, Application
 
@@ -12,17 +12,20 @@ from conversation.content.afternoon_conversation import create_afternoon_convers
 from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
+from conversation.content.weekly_conversation import create_weekly_conversation
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
-    MULTI_ANSWER_FINISHED, StickerMessage
+    MULTI_ANSWER_FINISHED, StickerMessage, HISTORY_KEY, ImageMessage, ImageGroupMessage
+from statistics.chart_generator import ChartGenerator
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
+DAYS_SUN = (0,)
 TZ_DE = 'Europe/Berlin'
 CENGINE ='conversation_engine'
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
 if not BOT_TOKEN:
-    from secrets import BOT_TOKEN
+    from chatbot_secrets import BOT_TOKEN
 
 KEY_AFTERNOON_QUESTIONNAIRE = 'daily_questionnaire.afternoon'
 KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
@@ -30,7 +33,8 @@ KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
 MORNING_JOB = "{}_morning_message"
 AFTERNOON_JOB = "{}_afternoon_message"
 EVENING_JOB = "{}_evening_message"
-JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB]
+WEEKLY_JOB = "{}_weekly_message"
+JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB, WEEKLY_JOB]
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -69,7 +73,12 @@ async def send_next_messages(bot, cengine, chat_id):
             reply_markup = create_answer_options(message, cengine=cengine)
 
         if isinstance(message, StickerMessage):
-            await bot.send_sticker(chat_id=chat_id, sticker=message.content().text)
+            await bot.send_sticker(chat_id=chat_id, sticker=message.sticker_id)
+        elif isinstance(message, ImageMessage):
+            await bot.send_photo(chat_id, message.image)
+        elif isinstance(message, ImageGroupMessage):
+            media_group = [InputMediaPhoto(image) for image in message.media_group]
+            await bot.send_media_group(chat_id, media_group)
         else:
             await bot.send_message(
                 chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
@@ -105,6 +114,14 @@ async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         f'This is what you already told me: \n{json_str}'
     )
+
+
+async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    cengine = get_conversation_engine(context)
+    charts = await create_weekly_charts(cengine)
+    conversation = create_weekly_conversation(charts)
+    cengine.begin_new_conversation(conversation)
+    await send_next_messages(context.bot, cengine, update.effective_chat.id)
 
 
 async def handle_text_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -144,6 +161,8 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     # evening_time = morning_time + timedelta(seconds=50) # debug override
     evening_job_name = EVENING_JOB.format(chat_id)
 
+    weekly_job_name = WEEKLY_JOB.format(chat_id)
+
     job_data = (application, context, cengine)
     job_queue = job_queue or context.job_queue
     job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=morning_job_name,
@@ -152,6 +171,8 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
                         days=DAYS_MON_FRI, data=job_data, job_kwargs={'id': afternoon_job_name, 'replace_existing': True})
     job_queue.run_daily(jobqueue_callback, evening_time, chat_id=chat_id, name=evening_job_name,
                         data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
+    job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=weekly_job_name,
+                        days=DAYS_SUN, data=job_data, job_kwargs={'id': weekly_job_name, 'replace_existing': True})
 
 
 async def jobqueue_callback(context: ContextTypes.user_data) -> None:
@@ -164,12 +185,28 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     elif context.job.name == EVENING_JOB.format(context.job.chat_id):
         cengine.copy_today_to_history()
         conversation = []  # TODO Later create evening statistics, if day has data. Maybe reflect here on history?
+    elif context.job.name == WEEKLY_JOB.format(context.job.chat_id):
+        charts = await create_weekly_charts(cengine)
+        conversation = create_weekly_conversation(charts)
     else:
         return
 
     cengine.begin_new_conversation(conversation)  # TODO Don't always begin new conversation (?)
     bot = application.bot if application else passed_context.bot
     await send_next_messages(bot, cengine, context.job.chat_id)
+
+
+async def create_weekly_charts(cengine):
+    history = cengine.get_state(HISTORY_KEY)
+    try:
+        chart_generator = ChartGenerator(history)
+        start_date = str((datetime.now() - timedelta(days=7)).date())
+        end_date = str(datetime.now().date())
+        line_chart_buffer = chart_generator.generate_line_chart(start_date=start_date, end_date=end_date)
+        tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
+        return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
+    except:
+        return None
 
 
 async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -217,6 +254,7 @@ if __name__ == '__main__':
     start_handler = CommandHandler('start', start)
     stop_handler = CommandHandler('stop_and_delete', stop)
     show_handler = CommandHandler('show', show_data)
+    show_weekly_handler = CommandHandler('show_weekly', show_weekly_statistics)
     override_setup_handler = CommandHandler('override_setup', override_setup)
     override_morning_handler = CommandHandler('override_morning', override_morning)
     override_afternoon_handler = CommandHandler('override_afternoon', override_afternoon)
@@ -227,6 +265,7 @@ if __name__ == '__main__':
     application.add_handler(start_handler)
     application.add_handler(stop_handler)
     application.add_handler(show_handler)
+    application.add_handler(show_weekly_handler)
     application.add_handler(override_setup_handler)
     application.add_handler(override_morning_handler)
     application.add_handler(override_afternoon_handler)

@@ -23,20 +23,27 @@ class ThumbsUpCatSticker(StickerMessage):
     ID = "CAACAgIAAxkBAAEoYeNlhK4C3Eqmy297ceXoI6W1E5KnPAACP0YAAg_EKEh1NETO709qWDME"
 
     def __init__(self):
-        super(StickerMessage, self).__init__(self.ID)
+        super(ThumbsUpCatSticker, self).__init__(self.ID)
+
+
+class YawningCatSticker(StickerMessage):
+    ID = "CAACAgIAAxkBAAEoqbFllvUQEINFMjoeyEX8MIMqolKw-AACwUQAAotwIUiVbldFvH-vkDQE"
+
+    def __init__(self):
+        super(YawningCatSticker, self).__init__(self.ID)
 
 
 class WavingCatSticker(StickerMessage):
     ID = "CAACAgIAAxkBAAEoYcNlhKgRGBOYzALHxGMGkThWelkThQACaUMAAmBJKUgZplO_8QeEJDME"
 
     def __init__(self):
-        super(StickerMessage, self).__init__(self.ID)
+        super(WavingCatSticker, self).__init__(self.ID)
 
 class ByeCatSticker(StickerMessage):
     ID = "CAACAgIAAxkBAAEoaJdlhxeWjLMTKwySrHEBZHN2daALxAACIkQAAgnJIEiTYD5CYYFWczME"
 
     def __init__(self):
-        super(StickerMessage, self).__init__(self.ID)
+        super(ByeCatSticker, self).__init__(self.ID)
 
 class GoodbyeMessage(Message):
     PROMPTS = [

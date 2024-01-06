@@ -42,7 +42,20 @@ class Message:
 
 class StickerMessage(Message):
     def __init__(self, sticker_id):
-        super(Message, self).__init__(sticker_id)
+        self.sticker_id = sticker_id
+        super(StickerMessage, self).__init__("")
+
+
+class ImageMessage(Message):
+    def __init__(self, image):
+        self.image = image
+        super(ImageMessage, self).__init__("")
+
+
+class ImageGroupMessage(Message):
+    def __init__(self, media_group):
+        self.media_group = media_group
+        super(ImageGroupMessage, self).__init__("")
 
 
 class AnswerableMessage(Message):
