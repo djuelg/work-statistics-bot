@@ -6,9 +6,9 @@ def create_weekly_conversation(images):
     messages = [MorningMessage(), ]
     if images:
         messages.extend([WeeklyIntroductionMessage(), ImageGroupMessage(images), WeeklyReflectionMessage(),
-                         YawningCatSticker(), WeeklyGoodbyeMessage()])
+                         WeeklyGoodbyeMessage(), YawningCatSticker()])
     else:
-        messages.extend([ProblematicDataMessage(), GoodbyeMessage()])
+        messages.extend([ProblematicDataMessage(), GoodbyeMessage(), YawningCatSticker()])
     return messages
 
 

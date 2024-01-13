@@ -41,14 +41,14 @@ class ChartGenerator:
                 separated_data['morning_energy'].append(morning_data.get('energy_state', None))
                 separated_data['morning_stress'].append(morning_data.get('stress_state', None))
                 separated_data['morning_fatigue'].append(morning_data.get('mental_fatigue_state', None))
-                separated_data['morning_demotivation'].append(morning_data.get('demotivation_state', None))
+                separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
 
                 # Extract afternoon data
                 afternoon_data = day_data.get('afternoon', {})
                 separated_data['afternoon_energy'].append(afternoon_data.get('energy_state', None))
                 separated_data['afternoon_stress'].append(afternoon_data.get('stress_state', None))
                 separated_data['afternoon_fatigue'].append(afternoon_data.get('mental_fatigue_state', None))
-                separated_data['afternoon_demotivation'].append(morning_data.get('demotivation_state', None))
+                separated_data['afternoon_demotivation'].append(morning_data.get('motivation_state', None))
 
         separated_data['morning_labels'] = \
             [f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}"
@@ -63,11 +63,10 @@ class ChartGenerator:
 
         # Combine morning and afternoon data
         combined_dates = self._flatmap_zip(sep_data['dates'], sep_data['dates'])
-        combined_energy = self._flatmap_zip(sep_data['morning_energy'], sep_data['afternoon_energy'], offset=0.0225)
-        combined_stress = self._flatmap_zip(sep_data['morning_stress'], sep_data['afternoon_stress'])
-        combined_fatigue = self._flatmap_zip(sep_data['morning_fatigue'], sep_data['afternoon_fatigue'], offset=-0.0225)
-        combined_demotivation = self._flatmap_zip(sep_data['morning_demotivation'], sep_data['afternoon_demotivation'],
-                                                  offset=0.0225)
+        combined_energy = self._flatmap_zip(sep_data['morning_energy'], sep_data['afternoon_energy'], offset=0.03375)
+        combined_fatigue = self._flatmap_zip(sep_data['morning_fatigue'], sep_data['afternoon_fatigue'], offset=-0.03375)
+        combined_demotivation = self._flatmap_zip(sep_data['morning_demotivation'], sep_data['afternoon_demotivation'], offset=0.01125)
+        combined_stress = self._flatmap_zip(sep_data['morning_stress'], sep_data['afternoon_stress'], offset=-0.01125)
         combined_labels = self._flatmap_zip(sep_data['morning_labels'], sep_data['afternoon_labels'])
 
         return {'combined_dates': combined_dates,

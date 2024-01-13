@@ -14,8 +14,8 @@ def create_setup_conversation(first_met=True):
         WorkBeginQuestion(),
         MultiAnswerExampleMessage(),
         MultiAnswerExampleReaction(),
+        SetupWrapupMessage(),
         ThumbsUpCatSticker(),
-        SetupWrapupMessage()
     ]
 
 

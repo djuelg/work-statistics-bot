@@ -7,10 +7,10 @@ readme = "README.md"
 packages = [{include = "mental_health_telegram_bot"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.8"
 python-telegram-bot = {version = "^20.7", extras = ["job-queue", "webhooks"]}
-matplotlib = "^3.8.2"
-numpy = "^1.26.3"
+matplotlib = "^3.7"
+numpy = "^1.23"
 
 [build-system]
 requires = ["poetry-core"]

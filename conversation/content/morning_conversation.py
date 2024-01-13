@@ -17,8 +17,8 @@ def create_morning_conversation():
         MentalFatigueQuestion(KEY_GROUPING_MORNING),
         MotivationQuestion(KEY_GROUPING_MORNING),
         MoodQuestion(KEY_GROUPING_MORNING, callback=finalize_questionnaire_callback),
+        GoodbyeMessage(),
         WavingCatSticker(),
-        GoodbyeMessage()
     ]
 
 

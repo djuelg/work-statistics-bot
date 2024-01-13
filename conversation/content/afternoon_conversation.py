@@ -19,8 +19,8 @@ def create_afternoon_conversation():
         MotivationQuestion(KEY_GROUPING_AFTERNOON),
         MoodQuestion(KEY_GROUPING_AFTERNOON),
         TasksQuestion(KEY_GROUPING_AFTERNOON, callback=finalize_questionnaire_callback),
+        GoodbyeMessage(),
         WavingCatSticker(),
-        GoodbyeMessage()
     ]
 
 
