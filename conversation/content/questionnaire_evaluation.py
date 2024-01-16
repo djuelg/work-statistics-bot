@@ -18,12 +18,12 @@ BREATHING_LINK = "https://www.youtube.com/results?search_query=5+minute+breathin
 
 class GenericRemedyMessage(Message):
     PROMPTS = [
-        f"- *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine [Sport-]({SPORT_LINK}) "
+        f"• *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine [Sport-]({SPORT_LINK}) "
         f"oder [Yoga-Routine]({YOGA_LINK}) einlegst. \n"
-         "- *Sprich mit jemandem:* Führe ein kurzes Gespräch mit jemandem in deiner Nähe, oder rufe Freunde an. \n"
-         "- *Schreib deine Gedanken auf:* Falls niemand in der Nähe ist, oder du keine Lust hast deine Situation mit jemandem zu besprechen, kann es auch hilfreich sein, deine Gedanken zu verschriftlichen. \n"
-         f"- *Eine Achtsamkeitsübung machen:* Bspw. sich ein paar Momente für [Meditation]({MEDITATION_LINK}) oder [Atemübungen]({BREATHING_LINK}) zu nehmen \n"
-         "- *Mach etwas anderes:* Erledige etwas kleines, wofür du eher die Muße hast und mach danach mit deiner eigentlichen Aufgabe weiter. \n"
+         "• *Sprich mit jemandem:* Führe ein kurzes Gespräch mit jemandem in deiner Nähe, oder rufe Freunde an. \n"
+         "• *Schreib deine Gedanken auf:* Nimm dir kurz Zeit, um deine Gedanken auf Papier zu bringen. Das kann helfen, sie zu ordnen und einen klaren Kopf zu bekommen. \n"
+         f"• *Eine Achtsamkeitsübung machen:* Sich ein paar Momente für bspw. [Meditation]({MEDITATION_LINK}) oder [Atemübungen]({BREATHING_LINK}) nehmen \n"
+         "• *Mach etwas anderes:* Erledige etwas kleines, wofür du eher die Muße hast und mach danach mit deiner eigentlichen Aufgabe weiter. \n"
     ]
 
     def __init__(self):
@@ -68,46 +68,57 @@ class StressExpert(GenericExpert):
     STRESS_INTRODUCTION = "*Zum Thema Stress:* \n" \
                           "Stress lässt sich natürlich nicht immer vermeiden. " \
                           "Versuche deine Tage in stressigen Phasen pragmatisch zu planen: " \
-                          "Kümmere dich zuerst um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst. Das ist in Ordnung. " \
-                          f"Bei der Planung kann dir z.B. eine To-Do Liste oder die [Eisenhower Matrix]({MATRIX_LINK}) helfen"
-    REMEDY_MEDITATION = f"[Achtsamkeitsübungen]({MEDITATION_LINK}) können helfen Stress abzubauen. Sie können jedoch auch problematisch sein, " \
-                        "wenn du sie nur als weiteres To-Do in deinem schon vollen Tag betrachtest. Vor dem Arbeitsalltag, " \
-                        "oder anstelle von Zeit auf sozialen Medien sind gute Möglichkeiten Achtsamkeitsübungen in den Tag einzubauen."
+                          "Kümmere dich zuerst um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst. Das ist in Ordnung. "
+    REMEDY_MEDITATION = f"[Achtsamkeitsübungen]({MEDITATION_LINK}) sind effektiv beim Stressabbau. Allerdings können sie problematisch werden, " \
+                        "wenn du sie lediglich als zusätzliche Aufgabe in einem ohnehin vollen Tag betrachtest. Versuche daher Zeiten zu finden " \
+                        "an denen du die Übung in feste Tagesabläufe integrieren kannst."
     REMEDY_RELAX = "Nach der Arbeit solltest du dir möglichst Zeit zur Entspannung nehmen. " \
-                   "Wenn das nicht möglich ist, setze dir doch schonmal eine feste Zeit zum Entspannen in der Zuknft."
+                   "Wenn das nicht möglich ist, blockiere dir schonmal eine feste Zeit zum Entspannen in der Zukunft."
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        responses = [Message(text=self.STRESS_INTRODUCTION),
-                     Message(text=self.REMEDY_RELAX)
-                     ]
+        responses = [Message(text=self.STRESS_INTRODUCTION)]
 
-        # TODO History: Auf andauernden Stress eingehen
         # TODO Später: Z.B. Fragen ob Achtsamkeitsübungen überhaupt für einen etwas sind
+        # TODO Später: Bzw. Zum Denken anregen: Auf welche Entspannung würdest du dich freuen?
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(text=self.REMEDY_MEDITATION))
+            responses.append(Message(text=self.REMEDY_RELAX))
         else:
-            responses.append(WhatElseMessage(text=self.REMEDY_MEDITATION))
+            responses.append(WhatElseMessage(text=self.REMEDY_RELAX, callback=self.get_more_info_callback))
         return responses
+
+    def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
+        messages.append(Message(text=self.REMEDY_MEDITATION))
+        return messages
 
 
 class MentalFatigueExpert(GenericExpert):
     MENTAL_FATIGUE_INTRODUCTION = "*Zum Thema mentale Ermüdung:* \n" \
-                                  "Denk daran, dass mentale Ermüdung durch anhaltende mentale Anstrengungen entsteht. " \
-                                  "Häufig geht sie mit einem Gefühl von Unlust weiterzumachen einher. " \
-                                  "Dein Körper versucht also dir zu vermitteln, mehr Pausen einzulegen."
-    REMEDY_SLOW_DOWN = "Lass es ruhig angehen, und mache etwas was dich mental entlastet: Ein paar Minuten nicht sitzen, vielleicht etwas an die frische Luft gehen, oder ein paar Minuten dösen. "
-    REMEDY_PAUSES_1 = "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
-    REMEDY_PAUSES_2 = "Bei mentaler Ermüdung kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+                                  "Mentale Ermüdung entsteht durch anhaltende geistige Anstrengungen. " \
+                                  "Häufig geht sie mit einem Gefühl von Unlust einher. " \
+                                  "Dein Körper versucht dir damit zu vermitteln, Erholungspausen einzulegen. "
+    REMEDY_PAUSES_1 = "Die oben genannte Pomodoro Methode kann helfen, diese nicht zu vergessen."
+    REMEDY_PAUSES_2 = "Die Pomodoro Methode kann helfen, diese nicht zu vergessen. Bspw. mithilfe des @pomodoro\_timer\_bot."
+    REMEDY_SLOW_DOWN = "Mach in den Pausen etwas, was dich mental entlastet: Ein paar Minuten nicht sitzen, an die frische Luft gehen, oder z.B. einen Power-Nap. "
+    REMEDY_WHOLE_SYSTEM = "Ergänzend ist es ratsam, regelmäßige körperliche Aktivität in den Tagesablauf einzubauen, " \
+                          "um die mentale Ermüdung zu reduzieren und die allgemeine geistige Gesundheit zu fördern. " \
+                          "Zudem ist eine ausgewogene Ernährung und ausreichender Schlaf entscheidend, um die Belastbarkeit des Gehirns zu unterstützen."
 
     def run(self):
+        responses = []
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        responses = [Message(text=self.MENTAL_FATIGUE_INTRODUCTION)]
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(self.REMEDY_SLOW_DOWN + self.REMEDY_PAUSES_1))
+            responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_1))
         else:
-            responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN + self.REMEDY_PAUSES_2))
+            responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_2))
+        responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN, callback=self.get_more_info_callback))
         return responses
+
+    def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
+        messages.append(Message(text=self.REMEDY_WHOLE_SYSTEM))
+        return messages
 
 
 class SleepinessExpert(GenericExpert):
@@ -138,24 +149,32 @@ class SleepinessExpert(GenericExpert):
 
 class DemotivationExpert(GenericExpert):
     DEMOTIVATION_INTRODUCTION = "*Zum Thema wenig Motivation und Unlust:* \n" \
-                                  "Unmotiviertheit kann herausfordernd sein, aber es gibt Ansätze, die dir helfen können." \
-                                " Zunächst einmal ist es wichtig zu verstehen, warum du dich unmotiviert fühlst. " \
-                                "Ist es z.B. die aktuelle Aufgabe auf die du keine Lust hast? " \
-                                "Dann mach dir bewusst, warum es wichtig ist, die Aufgabe zu erledigen, und welchen langfristigen Nutzen sie für dich haben kann."
-    REMEDY_CELEBRATE = "Nicht für jeden Aspekt deines Alltags intrinsische Motivation zu haben ist normal. Daher kann es hilfreich sein, realistische, erreichbare Ziele zu setzen, die aus kleinen Schritten bestehen. " \
-                       "Für jeden erreichten Schritt kannst du dich belohnen, " \
-                       "z.B. indem du dir Zeit für ein Hobby nimmst, dich mit Freunden austauschst, oder dir dein Lieblingsessen gönnst. "
-    REMEDY_PAUSES_1 = "Wenn du unmotiviert bist, kann es auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
-    REMEDY_PAUSES_2 = "Wenn du unmotiviert bist, kann es auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+                                "Für manche Aufgaben keine intrinsische Motivation zu haben ist normal. " \
+                                "Oft hilft es jedoch schon sich nur für einen Moment zu überwinden und den Anfang zu machen, bis die Unlust verfliegt. " \
+                                "Außerdem fördert es die Willenskraft, Aufgaben trotz innerem Widerstand zu erledigen! " \
+                                "Natürlich nur im Rahmen deiner Belastungsgrenzen: Lass es ruhig angehen, wenn es nicht so gut läuft wie erhofft."
+    REMEDY_CELEBRATE = "Frag dich warum du das Geplante trotz Unlust erledigen möchtest. Vielleicht ist es nur der finanzielle Aspekt. " \
+                       "Vielleicht hilfst du damit aber auch jemand Anderem. Vielleicht gönnst du dir auch etwas, nachdem du dich überwunden hast: " \
+                       "Zeit für dein Lieblingshobby, oder ein gutes Essen zum Beispiel. "
+    REMEDY_PAUSES_1 = "Es kann auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
+    REMEDY_PAUSES_2 = "Es kann auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+    REMEDY_REFLECTION = "Hilfreich ist es außerdem die Gründe für die fehlende Motivation zu reflektieren. War dein Tag einfach anstrengend? " \
+                        "Ist die konkrete Aufgabe unangenehm? Oder gibt es vielleicht allgemein etwas, dass dich unglücklich macht? " \
+                        "Was kannst du tun, um in Zukunft wieder mit mehr Motivation durch den Tag zu gehen?"
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        responses = [Message(text=self.DEMOTIVATION_INTRODUCTION)]
+        responses = [Message(text=self.DEMOTIVATION_INTRODUCTION), Message(text=self.REMEDY_CELEBRATE)]
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(self.REMEDY_CELEBRATE + self.REMEDY_PAUSES_1))
+            responses.append(Message(self.REMEDY_PAUSES_1))
         else:
-            responses.append(WhatElseMessage(self.REMEDY_CELEBRATE + self.REMEDY_PAUSES_2))
+            responses.append(WhatElseMessage(self.REMEDY_PAUSES_2, callback=self.get_more_info_callback))
         return responses
+
+    def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
+        messages.append(Message(text=self.REMEDY_REFLECTION))
+        return messages
 
 
 class QuestionnaireEvaluationExpert(GenericExpert):
@@ -165,9 +184,8 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                         "Wenn du dich nicht in Topform fühlst, lass es einfach etwas ruhiger angehen. Viel Erfolg bei der restlichen Arbeit."
     SOME_BAD_RESPONSE = "Deine Bewertung ergibt einen Durchschnitt von {}/5, und es lässt sich erkennen, dass du bestimmte Aspekte des Tages als anspruchsvoll empfunden hast."
     BAD_RESPONSE = "Der Durchschnitt von {}/5 deutet darauf hin, dass es dir allgemein nicht so gut zu gehen scheint."
-    REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, nicht " \
-                              f"länger als nötig zu arbeiten und dir häufiger mal eine kurze Auszeit zu nehmen. " \
-                              f"Diese kannst du dann z.B. für folgendes nutzen:"
+    REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, und nicht " \
+                              f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten für Dinge wie: "
     REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
 
     STATE_NAMES = {
@@ -230,8 +248,6 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
 
             else:
-                responses.append(Message(text=self.SOME_BAD_RESPONSE.format(med_mood)))
-
                 if most_severe_two:
                     if med_mood >= BAD_MOOD_CONSTANT and most_severe_two[0][1] == 5:
                         expert = self.STATE_EXPERTS[most_severe_two[0][0]](self._cengine, self._key_base)
@@ -240,6 +256,8 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                         for state_pair in most_severe_two:
                             expert = self.STATE_EXPERTS[state_pair[0]](self._cengine, self._key_base)
                             responses.extend(expert.run())
+                else:
+                    responses.append(Message(text=self.SOME_BAD_RESPONSE.format(med_mood)))
 
         # TODO: Veränderungen zu vormittag / gestern einarbeiten
 

@@ -82,7 +82,7 @@ async def send_next_messages(bot, cengine, chat_id):
         else:
             await bot.send_message(
                 chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
-                parse_mode='markdown', disable_web_page_preview=True
+                parse_mode='markdown', disable_web_page_preview=True  # TODO: ggf. switch to MarkdownV2
             )
 
         message.mark_as_sent()
