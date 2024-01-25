@@ -11,10 +11,12 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
+from conversation.content.questionnaire_evaluation import FREEFORM_CLIENT_DESCRIPTION
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.content.weekly_conversation import create_weekly_conversation
 from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
     MULTI_ANSWER_FINISHED, StickerMessage, HISTORY_KEY, ImageMessage, ImageGroupMessage
+from freeform_chat.freeform_client import FreeformClient
 from statistics.chart_generator import ChartGenerator
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
@@ -24,8 +26,12 @@ CENGINE ='conversation_engine'
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
+OPENAI_TOKEN = os.environ.get("OPENAI_TOKEN", None)
 if not BOT_TOKEN:
     from chatbot_secrets import BOT_TOKEN
+if not OPENAI_TOKEN:
+    from chatbot_secrets import OPENAI_TOKEN
+
 
 KEY_AFTERNOON_QUESTIONNAIRE = 'daily_questionnaire.afternoon'
 KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
@@ -44,9 +50,14 @@ logging.basicConfig(
 
 def get_conversation_engine(context):
     cengine = context.user_data.get(CENGINE, None)
+    freeform_client = FreeformClient(OPENAI_TOKEN, FREEFORM_CLIENT_DESCRIPTION)
     if cengine is None:
-        cengine = ConversationEngine()
-        context.user_data[CENGINE] = cengine
+        cengine = ConversationEngine(freeform_client=freeform_client)
+    else:
+        freeform_active = cengine.freeform_active if hasattr(cengine, 'freeform_active') else False
+        cengine = ConversationEngine(queue=cengine.queue, state=cengine.state, current_message=cengine.current_message,
+                                     freeform_client=freeform_client, freeform_active=freeform_active)
+    context.user_data[CENGINE] = cengine
     return cengine
 
 
@@ -143,7 +154,7 @@ async def general_callback_handler(update, context, user_input):
 
             await send_next_messages(context.bot, cengine, update.effective_chat.id)
     else:
-        pass  # ignore unexpected button taps
+        pass  # ignore unexpected inputs
 
 
 def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, application=None):

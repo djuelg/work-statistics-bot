@@ -11,6 +11,7 @@ python = "^3.8"
 python-telegram-bot = {version = "^20.7", extras = ["job-queue", "webhooks"]}
 matplotlib = "^3.7"
 numpy = "^1.23"
+openai = "^1.9.0"
 
 [build-system]
 requires = ["poetry-core"]

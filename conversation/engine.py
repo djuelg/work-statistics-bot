@@ -6,6 +6,7 @@ from datetime import datetime
 
 KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
+CONVERSATION_MESSAGES_KEY = f"{CURRENT_CONVERSATION_KEY}.messages"
 DAILY_QUESTIONNAIRE_KEY = 'daily_questionnaire'
 HISTORY_KEY = 'history'
 MULTI_ANSWER_FINISHED = 'Fertig'
@@ -38,6 +39,9 @@ class Message:
 
     def has_been_sent(self):
         return self._sent
+
+    def __repr__(self):
+        return self._content.text
 
 
 class StickerMessage(Message):
@@ -107,28 +111,54 @@ def extend_predefined_with_recent_items(question_key, cengine, predefined_answer
     return predefined_answers
 
 
+class FreeformClientBase:
+    ROLE_ASSISTANT = 'assistant'
+    ROLE_USER = 'user'
+
+    def generate_responses(self, messages):
+        pass
+
+
 class ConversationEngine:
-    def __init__(self, queue=None):
-        self.state = dict()
+    def __init__(self, queue=None, state=None, current_message=None, freeform_client=None, freeform_active=False):
         self.queue = deque(queue) if queue is not None else deque()
-        self.current_message = None
+        self.state = state or dict()
+        self.current_message = current_message
+        self.freeform_client = freeform_client
+        self.freeform_active = freeform_active
 
     def begin_new_conversation(self, conversation):
+        self.freeform_active = False
         self.queue.clear()
         self.drop_state(CURRENT_CONVERSATION_KEY)
         self.queue.extend(conversation)
 
+    def activate_freeform(self):
+        self.freeform_active = True
+        self.queue.clear()
+
     def next_message(self):
         self.current_message = self.queue.popleft()
+        if str(self.current_message):
+            self._save_conversation_messages(FreeformClientBase.ROLE_ASSISTANT, str(self.current_message))
+        if len(self.queue) == 0:
+            self.freeform_active = True
         return self.current_message
 
     def is_waiting_for_user_input(self):
-        return self.current_message.has_been_sent() and isinstance(self.current_message, AnswerableMessage)
+        return (self.current_message.has_been_sent() and isinstance(self.current_message, AnswerableMessage)) \
+            or self.freeform_active
 
     def handle_user_input(self, text):
-        is_multi_answer_finished = isinstance(self.current_message, MultiAnswerMessage) and text == MULTI_ANSWER_FINISHED
-        answers = self.current_message.handle_user_input(text,
-                                                         cengine=self, is_multi_answer_finished=is_multi_answer_finished)
+        self._save_conversation_messages(FreeformClientBase.ROLE_USER, text)
+        if self.freeform_active:
+            last_messages = self.get_state(CONVERSATION_MESSAGES_KEY)
+            answers = self.freeform_client.generate_responses(last_messages)
+            answers = [Message(text=ans) for ans in answers]
+        else:
+            is_multi_answer_finished = isinstance(self.current_message, MultiAnswerMessage) and text == MULTI_ANSWER_FINISHED
+            answers = self.current_message.handle_user_input(text, cengine=self, is_multi_answer_finished=is_multi_answer_finished)
+
         if answers:
             self.queue.extendleft(answers)
 
@@ -146,6 +176,9 @@ class ConversationEngine:
         recent_items.insert(0, value)
         recent_items = list(set(recent_items))[:min(recent_size, len(recent_items))]
         self.update_state(recent_key, recent_items)
+
+    def _save_conversation_messages(self, role, current_message):
+        self.append_state(CONVERSATION_MESSAGES_KEY, (role, current_message))
 
     def get_state(self, key):
         nested_keys = key.split('.')

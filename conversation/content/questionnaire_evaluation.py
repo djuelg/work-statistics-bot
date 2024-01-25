@@ -15,6 +15,14 @@ YOGA_LINK = "https://www.youtube.com/results?search_query=easy+10+minute+yoga-ro
 MEDITATION_LINK = "https://www.youtube.com/results?search_query=10+minute+guided+meditation"
 BREATHING_LINK = "https://www.youtube.com/results?search_query=5+minute+breathing+exercise"
 
+FREEFORM_CLIENT_DESCRIPTION = "Du bist ein Assistent, der mit dem User erfasst, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. " \
+                      "Wie ein Psychotherapeut, der mit dem User das Stimmungstagebuch zu seinem Arbeitsalltag bespricht. " \
+                      "Orientiere dich dabei an dem Vorgehen und den Methoden der kognitiven Verhaltenstherapie. " \
+                      "Besser als konkrete Empfehlungen sind Rückfragen, die zur Selbstreflexion anregen." \
+                      "Halte dich an Fakten und belege diese mit seriösen Quellen, z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie. " \
+                      "Drücke dich kurz, präzise und empathisch aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. " \
+                      "Verwende weniger als 100 completion_tokens."
+
 
 class GenericRemedyMessage(Message):
     PROMPTS = [
@@ -31,23 +39,33 @@ class GenericRemedyMessage(Message):
 
 
 def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
-    if value == WhatElseMessage.CALLBACK_KEY:
+    if value == WhatElseMessage.ANSWER_WHAT_ELSE:
         return [
             Message(text="Meist lohnt es sich ein paar Minuten Arbeitszeit zu opfern und die Aufgaben danach wieder mit einem frischeren Kopf anzugehen"),
                 GenericRemedyMessage(),
             Message(
                 text="In einigen Situation kann auch folgendes hilfreich sein:"),
         ]
+    elif value == WhatElseMessage.ANSWER_FREETEXT:
+        cengine.activate_freeform()
+        return [Message(text="Okay, dann schieß los!")]
     else:
         return [Message(text="Okay, das wars erstmal.")]
 
 
 class WhatElseMessage(SingleAnswerMessage):
-    CALLBACK_KEY = 'daily_questionnaire.remedy.what_else'
-    STATES = [("Das reicht an Infos", "True"), ("Was kann ich sonst noch tun?", CALLBACK_KEY)]
+    WHAT_ELSE_CALLBACK_KEY = 'daily_questionnaire.remedy.what_else'
+    ANSWER_ENOUGH = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_ENOUGH'
+    ANSWER_WHAT_ELSE = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_WHAT_ELSE'
+    ANSWER_FREETEXT = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_FREETEXT'
+    STATES = [
+        [("Das reicht an Infos", ANSWER_ENOUGH)],
+        [("Was kann ich sonst noch tun?", ANSWER_WHAT_ELSE)],
+        [("Ich möchte meine Situation beschreiben", ANSWER_FREETEXT)]
+    ]
 
     def __init__(self, text, callback=remedy_callback):
-        super().__init__(text, self.CALLBACK_KEY, callback, self.STATES)
+        super().__init__(text, self.WHAT_ELSE_CALLBACK_KEY, callback, self.STATES)
 
 
 class GenericExpert:
@@ -59,9 +77,15 @@ class GenericExpert:
         raise NotImplementedError("Must be implemented by subclass")
 
     def remedy_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
-        responses = self.run()
-        responses.reverse()
-        return responses
+        if value == WhatElseMessage.ANSWER_WHAT_ELSE:
+            responses = self.run()
+            responses.reverse()
+            return responses
+        elif value == WhatElseMessage.ANSWER_FREETEXT:
+            cengine.activate_freeform()
+            return [Message(text="Okay, dann schieß los!")]
+        else:
+            return [Message(text="Okay, das wars erstmal.")]
 
 
 class StressExpert(GenericExpert):
@@ -89,7 +113,8 @@ class StressExpert(GenericExpert):
 
     def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
         messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
-        messages.append(Message(text=self.REMEDY_MEDITATION))
+        if value == WhatElseMessage.ANSWER_WHAT_ELSE:
+            messages.append(Message(text=self.REMEDY_MEDITATION))
         return messages
 
 
@@ -110,14 +135,16 @@ class MentalFatigueExpert(GenericExpert):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
             responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_1))
+            responses.append(Message(text=self.REMEDY_SLOW_DOWN))
         else:
             responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_2))
-        responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN, callback=self.get_more_info_callback))
+            responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN, callback=self.get_more_info_callback))
         return responses
 
     def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
         messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
-        messages.append(Message(text=self.REMEDY_WHOLE_SYSTEM))
+        if value == WhatElseMessage.ANSWER_WHAT_ELSE:
+            messages.append(Message(text=self.REMEDY_WHOLE_SYSTEM))
         return messages
 
 
@@ -173,7 +200,8 @@ class DemotivationExpert(GenericExpert):
 
     def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
         messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
-        messages.append(Message(text=self.REMEDY_REFLECTION))
+        if value == WhatElseMessage.ANSWER_WHAT_ELSE:
+            messages.append(Message(text=self.REMEDY_REFLECTION))
         return messages
 
 
