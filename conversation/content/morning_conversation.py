@@ -3,7 +3,7 @@ from conversation.content.questionaire_conversation import StressQuestion, \
     MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback, \
     MotivationQuestion
 from conversation.content.questionnaire_evaluation import KEY_GROUPING_MORNING
-from conversation.engine import Message
+from conversation.message_types import Message
 
 
 def create_morning_conversation():

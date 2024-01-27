@@ -1,6 +1,6 @@
 import random
 
-from conversation.engine import Message, StickerMessage
+from conversation.message_types import Message, StickerMessage
 
 NAME_KEY = 'username'
 

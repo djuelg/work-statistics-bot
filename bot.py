@@ -1,120 +1,39 @@
 import json
 import logging
-import os
-import pickle
-from datetime import datetime, timedelta
 
-import pytz
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from telegram import Update
 from telegram.constants import ChatAction
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, \
-    CallbackQueryHandler, PicklePersistence, Application, CallbackContext
+    CallbackQueryHandler, PicklePersistence
 
+from bot_base import get_conversation_engine, send_next_messages, JOB_NAMES, global_cengine_cache, \
+    create_weekly_charts, setup_jobqueue_callbacks, KEY_MORNING_QUESTIONNAIRE, KEY_AFTERNOON_QUESTIONNAIRE, BOT_TOKEN, \
+    setup_jobqueue_after_startup, WEBHOOK_URL, KEY_STATE
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
-from conversation.content.questionnaire_evaluation import FREEFORM_CLIENT_DESCRIPTION
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.content.weekly_conversation import create_weekly_conversation
-from conversation.engine import ConversationEngine, MultiAnswerMessage, SingleAnswerMessage, AnswerableMessage, \
-    MULTI_ANSWER_FINISHED, StickerMessage, HISTORY_KEY, ImageMessage, ImageGroupMessage
-from freeform_chat.freeform_client import FreeformClient
-from statistics.chart_generator import ChartGenerator
-
-DAYS_MON_FRI = (1, 2, 3, 4, 5, 6)
-DAYS_SUN = (0,)
-TZ_DE = 'Europe/Berlin'
-USERDATA_KEY = 'user_data'
-CENGINE_KEY = 'conversation_engine'
-
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
-BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
-OPENAI_TOKEN = os.environ.get("OPENAI_TOKEN", None)
-if not BOT_TOKEN:
-    from chatbot_secrets import BOT_TOKEN
-if not OPENAI_TOKEN:
-    from chatbot_secrets import OPENAI_TOKEN
-
-
-KEY_AFTERNOON_QUESTIONNAIRE = 'daily_questionnaire.afternoon'
-KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
-
-MORNING_JOB = "{}_morning_message"
-AFTERNOON_JOB = "{}_afternoon_message"
-EVENING_JOB = "{}_evening_message"
-WEEKLY_JOB = "{}_weekly_message"
-JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB, WEEKLY_JOB]
+from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-global_cengine_cache = {}  # Global cache that holds pairs of (chat_id -> cengine)
 
-
-def get_conversation_engine(context, chat_id=None):
-    cengine = global_cengine_cache.get(chat_id, None)
-    if cengine:
-        if context.user_data and context.user_data.get(CENGINE_KEY, None) != cengine:
-            context.user_data[CENGINE_KEY] = cengine
-        return cengine
-
-    cengine = context.user_data.get(CENGINE_KEY, None)
-    freeform_client = FreeformClient(OPENAI_TOKEN, FREEFORM_CLIENT_DESCRIPTION)
-    if cengine is None:
-        cengine = ConversationEngine(freeform_client=freeform_client)
-    else:
-        cengine = ConversationEngine(queue=cengine.queue, state=cengine.state, current_message=cengine.current_message,
-                                     freeform_client=freeform_client)
-    context.user_data[CENGINE_KEY] = cengine
-    global_cengine_cache[chat_id] = cengine
-    return cengine
-
-
-def create_button(data):
-    content = (data[0], data[1]) if isinstance(data, tuple) else (data, data)
-    return InlineKeyboardButton(content[0], callback_data=content[1])
-
-
-def create_answer_options(message, cengine=None):
-    buttons_1d, buttons_2d = [], []
-    for row in message.content(cengine=cengine).predefined_answers:
-        if isinstance(row, list):
-            buttons_2d.append([create_button(button_text) for button_text in row])
-        else:
-            buttons_1d.append(create_button(row))
-    return InlineKeyboardMarkup([buttons_1d] if buttons_1d else buttons_2d)
-
-
-async def send_next_messages(bot, cengine, chat_id):
-    while cengine.queue:
-        message = cengine.next_message()
-        reply_markup = None
-        if isinstance(message, SingleAnswerMessage) or isinstance(message, MultiAnswerMessage):
-            reply_markup = create_answer_options(message, cengine=cengine)
-
-        if isinstance(message, StickerMessage):
-            await bot.send_sticker(chat_id=chat_id, sticker=message.sticker_id)
-        elif isinstance(message, ImageMessage):
-            await bot.send_photo(chat_id, message.image)
-        elif isinstance(message, ImageGroupMessage):
-            media_group = [InputMediaPhoto(image) for image in message.media_group]
-            await bot.send_media_group(chat_id, media_group)
-        else:
-            await bot.send_message(
-                chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
-                parse_mode='markdown', disable_web_page_preview=True  # TODO: ggf. switch to MarkdownV2
-            )
-
-        message.mark_as_sent()
-        if cengine.is_waiting_for_user_input():
-            break
+######################## COMMANDS ########################
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
     cengine.begin_new_conversation(create_setup_conversation())
+    await send_next_messages(context.bot, cengine, update.effective_chat.id)
+
+
+async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
+    cengine.begin_new_conversation(create_setup_conversation(first_met=False))
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 
 
@@ -128,12 +47,12 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     context.job_queue.get_jobs_by_name(job_name.format(update.effective_chat.id))]
     for job in current_jobs:
         job.schedule_removal()
-    del context.user_data[CENGINE_KEY]
+    del context.user_data[KEY_STATE]
     del global_cengine_cache[update.effective_chat.id]
 
 
 async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    json_str = json.dumps(context.user_data[CENGINE_KEY].state, indent=4)
+    json_str = json.dumps(context.user_data[KEY_STATE], indent=4)
     await update.message.reply_text(
         f'This is what you already told me: \n{json_str}'
     )
@@ -144,129 +63,6 @@ async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_T
     charts = await create_weekly_charts(cengine)
     conversation = create_weekly_conversation(charts)
     cengine.begin_new_conversation(conversation)
-    await send_next_messages(context.bot, cengine, update.effective_chat.id)
-
-
-async def handle_text_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await general_callback_handler(update, context, update.message.text)
-
-
-async def handle_button_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await general_callback_handler(update, context, update.callback_query.data)
-
-
-async def general_callback_handler(update, context, user_input):
-    cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    if cengine.is_waiting_for_user_input():
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-        cengine.handle_user_input(user_input)
-
-        if not isinstance(cengine.current_message, MultiAnswerMessage) or user_input == MULTI_ANSWER_FINISHED:
-            if isinstance(cengine.current_message, WorkBeginQuestion):
-                setup_jobqueue_callbacks(cengine, context, update.effective_chat.id)
-
-            await send_next_messages(context.bot, cengine, update.effective_chat.id)
-    else:
-        pass  # ignore unexpected inputs
-
-
-def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, application=None):
-    work_begin_hour = int(cengine.get_state(WorkBeginQuestion.CALLBACK_KEY))
-    morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))
-    # morning_time = datetime.now() + timedelta(seconds=10)  # debug override
-    morning_time = pytz.timezone(TZ_DE).localize(morning_time)
-    morning_job_name = MORNING_JOB.format(chat_id)
-
-    afternoon_time = morning_time + timedelta(hours=4, minutes=15)
-    # afternoon_time = morning_time + timedelta(seconds=30) # debug override
-    afternoon_job_name = AFTERNOON_JOB.format(chat_id)
-
-    evening_time = morning_time.replace(hour=19, minute=37)
-    # evening_time = morning_time + timedelta(seconds=50) # debug override
-    evening_job_name = EVENING_JOB.format(chat_id)
-
-    weekly_job_name = WEEKLY_JOB.format(chat_id)
-
-    job_data = (application, context)
-    job_queue = job_queue or context.job_queue
-    job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=morning_job_name,
-                        days=DAYS_MON_FRI, data=job_data, job_kwargs={'id': morning_job_name, 'replace_existing': True})
-    job_queue.run_daily(jobqueue_callback, afternoon_time, chat_id=chat_id, name=afternoon_job_name,
-                        days=DAYS_MON_FRI, data=job_data, job_kwargs={'id': afternoon_job_name, 'replace_existing': True})
-    job_queue.run_daily(jobqueue_callback, evening_time, chat_id=chat_id, name=evening_job_name,
-                        data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
-    job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=weekly_job_name,
-                        days=DAYS_SUN, data=job_data, job_kwargs={'id': weekly_job_name, 'replace_existing': True})
-
-
-async def jobqueue_callback(context: ContextTypes.user_data) -> None:
-    application, passed_context = context.job.data
-    if context.job.chat_id in global_cengine_cache:
-        cengine = global_cengine_cache[context.job.chat_id]
-    else:
-        cengine = get_cengine_from_persistence(context.job.chat_id)
-        global_cengine_cache[context.job.chat_id] = cengine
-
-    if not cengine:
-        del global_cengine_cache[context.job.chat_id]
-        return
-    elif context.job.name == MORNING_JOB.format(context.job.chat_id):
-        conversation = create_morning_conversation()
-    elif context.job.name == AFTERNOON_JOB.format(context.job.chat_id):
-        conversation = create_afternoon_conversation()
-    elif context.job.name == EVENING_JOB.format(context.job.chat_id):
-        cengine.copy_today_to_history()
-        conversation = []
-    elif context.job.name == WEEKLY_JOB.format(context.job.chat_id):
-        charts = await create_weekly_charts(cengine)
-        conversation = create_weekly_conversation(charts)
-    else:
-        return
-
-    cengine.begin_new_conversation(conversation)
-    bot = application.bot if application else passed_context.bot
-    await send_next_messages(bot, cengine, context.job.chat_id)
-
-
-def update_cengine_in_persistence(chat_id, new_cengine, pickle_file_path='conversation_bot.pkl'):
-    try:
-        with open(pickle_file_path, 'rb') as file:
-            persistence_data = pickle.load(file)
-
-        persistence_data.setdefault(USERDATA_KEY, {}).setdefault(chat_id, {})[CENGINE_KEY] = new_cengine
-
-        with open(pickle_file_path, 'wb') as file:
-            pickle.dump(persistence_data, file)
-
-    except (FileNotFoundError, pickle.UnpicklingError, KeyError):
-        pass
-
-
-def get_cengine_from_persistence(chat_id, pickle_file_path='conversation_bot.pkl'):
-    try:
-        with open(pickle_file_path, 'rb') as file:
-            conversations = pickle.load(file).get(USERDATA_KEY, {})
-            return conversations.get(chat_id, {}).get(CENGINE_KEY)
-    except (FileNotFoundError, pickle.UnpicklingError, KeyError):
-        return None
-
-
-async def create_weekly_charts(cengine):
-    history = cengine.get_state(HISTORY_KEY)
-    try:
-        chart_generator = ChartGenerator(history)
-        start_date = str((datetime.now() - timedelta(days=7)).date())
-        end_date = str(datetime.now().date())
-        line_chart_buffer = chart_generator.generate_line_chart(start_date=start_date, end_date=end_date)
-        tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
-        return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
-    except:
-        return None
-
-
-async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    cengine.begin_new_conversation(create_setup_conversation(first_met=False))
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 
 
@@ -292,15 +88,32 @@ async def update_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def setup_jobqueue_after_startup(application: Application) -> None:
-    context = application.context_types.context
-    for chat_id, user_data in application.user_data.items():
-        if 'conversation_engine' in user_data and 'history' in user_data['conversation_engine'].state:
-            cengine = user_data['conversation_engine']
-            setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=application.job_queue, application=application)
+######################## CALLBACKS ########################
 
 
-# origin: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Extensions---Your-first-Bot
+async def handle_text_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await general_callback_handler(update, context, update.message.text)
+
+
+async def handle_button_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await general_callback_handler(update, context, update.callback_query.data)
+
+
+async def general_callback_handler(update, context, user_input):
+    cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
+    if cengine.is_waiting_for_user_input():
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        cengine.handle_user_input(user_input)
+
+        if not isinstance(cengine.current_message, MultiAnswerMessage) or user_input == MULTI_ANSWER_FINISHED:
+            if isinstance(cengine.current_message, WorkBeginQuestion):
+                setup_jobqueue_callbacks(cengine, context, update.effective_chat.id)
+
+            await send_next_messages(context.bot, cengine, update.effective_chat.id)
+    else:
+        pass  # ignore unexpected inputs
+
+
 if __name__ == '__main__':
     persistence = PicklePersistence(filepath="conversation_bot.pkl", update_interval=10)
     application = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence)\

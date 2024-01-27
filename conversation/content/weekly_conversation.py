@@ -1,5 +1,5 @@
 from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker
-from conversation.engine import Message, ImageGroupMessage
+from conversation.message_types import Message, ImageGroupMessage
 
 
 def create_weekly_conversation(images):

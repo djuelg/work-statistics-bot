@@ -1,8 +1,8 @@
 import copy
 
 from conversation.content.generic_messages import ThumbsUpCatSticker
-from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback, AnswerableMessage, \
-    MultiAnswerMessage, update_state_multi_answer_callback
+from conversation.engine import update_state_multi_answer_callback, update_state_single_answer_callback
+from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, Message, AnswerableMessage
 
 
 def create_setup_conversation(first_met=True):

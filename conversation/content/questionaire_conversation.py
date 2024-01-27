@@ -1,8 +1,9 @@
 import copy
 
 from conversation.content.questionnaire_evaluation import QuestionnaireEvaluationExpert
-from conversation.engine import SingleAnswerMessage, MultiAnswerMessage, update_state_multi_answer_callback, \
-    update_state_single_answer_callback, extend_predefined_with_recent_items
+from conversation.engine import update_state_multi_answer_callback, update_state_single_answer_callback, \
+    extend_predefined_with_recent_items
+from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage
 
 
 # def combine_key_and_states(key, states):

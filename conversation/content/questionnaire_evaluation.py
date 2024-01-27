@@ -1,6 +1,6 @@
 import random
 
-from conversation.engine import SingleAnswerMessage, Message, FreeformMessage
+from conversation.message_types import SingleAnswerMessage, Message, FreeformMessage
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
 KEY_GROUPING_AFTERNOON = 'afternoon'

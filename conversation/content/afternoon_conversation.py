@@ -3,7 +3,8 @@ from conversation.content.questionaire_conversation import StressQuestion, \
     MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback, \
     MotivationQuestion
 from conversation.content.questionnaire_evaluation import KEY_GROUPING_AFTERNOON
-from conversation.engine import Message, SingleAnswerMessage, update_state_single_answer_callback
+from conversation.engine import update_state_single_answer_callback
+from conversation.message_types import Message, SingleAnswerMessage
 
 
 def create_afternoon_conversation():
