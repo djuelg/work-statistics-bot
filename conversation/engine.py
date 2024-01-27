@@ -62,6 +62,11 @@ class ImageGroupMessage(Message):
         super(ImageGroupMessage, self).__init__("")
 
 
+class FreeformMessage(Message):
+    def __init__(self, text):
+        super(FreeformMessage, self).__init__(text)
+
+
 class AnswerableMessage(Message):
 
     def __init__(self, text, callback_key, callback, predefined_answers=None):
@@ -120,41 +125,33 @@ class FreeformClientBase:
 
 
 class ConversationEngine:
-    def __init__(self, queue=None, state=None, current_message=None, freeform_client=None, freeform_active=False):
+    def __init__(self, queue=None, state=None, current_message=None, freeform_client=None):
         self.queue = deque(queue) if queue is not None else deque()
         self.state = state or dict()
         self.current_message = current_message
         self.freeform_client = freeform_client
-        self.freeform_active = freeform_active
 
     def begin_new_conversation(self, conversation):
-        self.freeform_active = False
         self.queue.clear()
         self.drop_state(CURRENT_CONVERSATION_KEY)
         self.queue.extend(conversation)
-
-    def activate_freeform(self):
-        self.freeform_active = True
-        self.queue.clear()
 
     def next_message(self):
         self.current_message = self.queue.popleft()
         if str(self.current_message):
             self._save_conversation_messages(FreeformClientBase.ROLE_ASSISTANT, str(self.current_message))
-        if len(self.queue) == 0:
-            self.freeform_active = True
         return self.current_message
 
     def is_waiting_for_user_input(self):
         return (self.current_message.has_been_sent() and isinstance(self.current_message, AnswerableMessage)) \
-            or self.freeform_active
+            or (self.current_message.has_been_sent() and isinstance(self.current_message, FreeformMessage))
 
     def handle_user_input(self, text):
         self._save_conversation_messages(FreeformClientBase.ROLE_USER, text)
-        if self.freeform_active:
+        if isinstance(self.current_message, FreeformMessage):
             last_messages = self.get_state(CONVERSATION_MESSAGES_KEY)
             answers = self.freeform_client.generate_responses(last_messages)
-            answers = [Message(text=ans) for ans in answers]
+            answers = [FreeformMessage(text=ans) for ans in answers]
         else:
             is_multi_answer_finished = isinstance(self.current_message, MultiAnswerMessage) and text == MULTI_ANSWER_FINISHED
             answers = self.current_message.handle_user_input(text, cengine=self, is_multi_answer_finished=is_multi_answer_finished)

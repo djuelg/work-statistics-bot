@@ -1,6 +1,6 @@
 import random
 
-from conversation.engine import SingleAnswerMessage, Message
+from conversation.engine import SingleAnswerMessage, Message, FreeformMessage
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
 KEY_GROUPING_AFTERNOON = 'afternoon'
@@ -47,8 +47,7 @@ def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
                 text="In einigen Situation kann auch folgendes hilfreich sein:"),
         ]
     elif value == WhatElseMessage.ANSWER_FREETEXT:
-        cengine.activate_freeform()
-        return [Message(text="Okay, dann schieß los!")]
+        return [FreeformMessage(text="Okay, dann schieß los!")]
     else:
         return [Message(text="Okay, das wars erstmal.")]
 
@@ -82,8 +81,7 @@ class GenericExpert:
             responses.reverse()
             return responses
         elif value == WhatElseMessage.ANSWER_FREETEXT:
-            cengine.activate_freeform()
-            return [Message(text="Okay, dann schieß los!")]
+            return [FreeformMessage(text="Okay, dann schieß los!")]
         else:
             return [Message(text="Okay, das wars erstmal.")]
 
