@@ -52,7 +52,9 @@ class ImageGroupMessage(Message):
 
 
 class FreeformMessage(Message):
-    def __init__(self, text):
+    def __init__(self, text, has_freeform_chaining=True, context_description=""):
+        self.has_freeform_chaining = has_freeform_chaining
+        self.context_description = context_description
         super(FreeformMessage, self).__init__(text)
 
 

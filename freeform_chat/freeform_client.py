@@ -11,9 +11,9 @@ class FreeformClient(FreeformClientBase):
         self.client = OpenAI(api_key=openai_key)
         self.context_description = context_description
 
-    def generate_responses(self, messages):
+    def generate_responses(self, messages, context_description=""):
         openai_formatted_messages = [
-            {"role": self.ROLE_SYSTEM, "content": self.context_description},
+            {"role": self.ROLE_SYSTEM, "content": context_description if context_description else self.context_description},
             *[{"role": m[0], "content": m[1]} for m in messages]
         ]
         response = self.client.chat.completions.create(

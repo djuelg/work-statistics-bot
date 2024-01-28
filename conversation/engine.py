@@ -3,7 +3,7 @@ import random
 from collections import deque
 from datetime import datetime
 
-from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage
+from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message
 
 KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
@@ -48,7 +48,7 @@ class FreeformClientBase:
     ROLE_ASSISTANT = 'assistant'
     ROLE_USER = 'user'
 
-    def generate_responses(self, messages):
+    def generate_responses(self, messages, context_description=""):
         pass
 
 
@@ -80,8 +80,11 @@ class ConversationEngine:
         self._save_conversation_messages(FreeformClientBase.ROLE_USER, text)
         if isinstance(self.current_message, FreeformMessage):
             last_messages = self.get_state(CONVERSATION_MESSAGES_KEY)
-            answers = self.freeform_client.generate_responses(last_messages)
-            answers = [FreeformMessage(text=ans) for ans in answers]
+            answers = self.freeform_client.generate_responses(last_messages, context_description=self.current_message.context_description)
+            if self.current_message.has_freeform_chaining:
+                answers = [FreeformMessage(text=ans) for ans in answers]
+            else:
+                answers = [Message(text=ans) for ans in answers]
         else:
             is_multi_answer_finished = isinstance(self.current_message, MultiAnswerMessage) and text == MULTI_ANSWER_FINISHED
             answers = self.current_message.handle_user_input(text, cengine=self, is_multi_answer_finished=is_multi_answer_finished)
