@@ -45,10 +45,13 @@ class ByeCatSticker(StickerMessage):
     def __init__(self):
         super(ByeCatSticker, self).__init__(self.ID)
 
+
 class GoodbyeMessage(Message):
     PROMPTS = [
         "Mach's gut!",
         "Bis später!",
+        "Bis dann!",
+        "Bis bald!",
     ]
 
     def __init__(self):
@@ -60,7 +63,7 @@ class MorningMessage(Message):
         "Guten Morgen{}!",
         "Hey{}!",
         "Hallo{}, ich wünsche einen guten Morgen.",
-        # Add more greetings here
+        "Hey{}, guten Morgen.",
     ]
 
     def __init__(self):

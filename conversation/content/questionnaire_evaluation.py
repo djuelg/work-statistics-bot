@@ -44,12 +44,12 @@ def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
             Message(text="Meist lohnt es sich ein paar Minuten Arbeitszeit zu opfern und die Aufgaben danach wieder mit einem frischeren Kopf anzugehen"),
                 GenericRemedyMessage(),
             Message(
-                text="In einigen Situation kann auch folgendes hilfreich sein:"),
+                text=["In einigen Situation kann auch folgendes hilfreich sein:", "Je nach Situation kann auch folgendes hilfreich sein:"]),
         ]
     elif value == WhatElseMessage.ANSWER_FREETEXT:
-        return [FreeformMessage(text="Okay, dann schieß los!")]
+        return [FreeformMessage(text=["Okay, dann schieß los!", "Gut, erzähl mal."])]
     else:
-        return [Message(text="Okay, das wars erstmal.")]
+        return [Message(text=["Okay, das wars erstmal.", "Dann wars das erstmal.", "Gut, dann wars das vorerst."])]
 
 
 class WhatElseMessage(SingleAnswerMessage):
@@ -81,9 +81,9 @@ class GenericExpert:
             responses.reverse()
             return responses
         elif value == WhatElseMessage.ANSWER_FREETEXT:
-            return [FreeformMessage(text="Okay, dann schieß los!")]
+            return [FreeformMessage(text=["Okay, dann schieß los!", "Gut, erzähl mal."])]
         else:
-            return [Message(text="Okay, das wars erstmal.")]
+            return [Message(text=["Okay, das wars erstmal.", "Dann wars das erstmal.", "Gut, dann wars das vorerst."])]
 
 
 class StressExpert(GenericExpert):

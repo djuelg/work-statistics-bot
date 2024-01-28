@@ -18,7 +18,11 @@ class TasksQuestion(MultiAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.{}.tasks'
     PROMPTS = [
         "Was steht in den nächsten Stunden an? "
-        "Wähle gerne aus den Beispielen unten, oder beschreibe selbst was ansteht."
+        "Wähle gerne aus den Beispielen unten, oder beschreibe es selbst.",
+        "Was machst du in den nächsten Stunden? "
+        "Wähle aus den Beispielen unten, oder beschreibe selbst was ansteht.",
+        "Woran arbeitest du in den nächsten Stunden? "
+        "Wähle gerne aus den Beispielen unten, oder beschreibe es selbst."
     ]
     STATES = [
         ["Coding", "Bugfixing", "Doku schreiben"],
@@ -113,7 +117,9 @@ class MotivationQuestion(SingleAnswerMessage):
 class MoodQuestion(MultiAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.{}.mood_state'
     PROMPTS = [
-        "Abschließend kannst du deine Laune mit den folgenden oder eigenen Begriffen näher beschreiben."
+        "Abschließend kannst du deine Laune mit den Begriffen unten oder auch eigenen näher beschreiben.",
+        "Beschreibe jetzt zum Schluss deine Stimmung mit den folgenden oder eigenen Begriffen näher.",
+        "Zum Abschluss kannst du deine Stimmung mit den unten stehenden oder eigenen Begriffen genauer beschreiben."
     ]
     STATES = [
         ["zufrieden", "glücklich", "produktiv"],

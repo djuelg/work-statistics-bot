@@ -41,21 +41,19 @@ class ChartGenerator:
                 separated_data['morning_energy'].append(morning_data.get('energy_state', None))
                 separated_data['morning_stress'].append(morning_data.get('stress_state', None))
                 separated_data['morning_fatigue'].append(morning_data.get('mental_fatigue_state', None))
-                separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
+                separated_data['morning_demotivation'].append(morning_data.get('demotivation_state', None))
+                separated_data['morning_labels'].append(
+                    f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}")
 
                 # Extract afternoon data
                 afternoon_data = day_data.get('afternoon', {})
                 separated_data['afternoon_energy'].append(afternoon_data.get('energy_state', None))
                 separated_data['afternoon_stress'].append(afternoon_data.get('stress_state', None))
                 separated_data['afternoon_fatigue'].append(afternoon_data.get('mental_fatigue_state', None))
-                separated_data['afternoon_demotivation'].append(morning_data.get('motivation_state', None))
+                separated_data['afternoon_demotivation'].append(afternoon_data.get('demotivation_state', None))
+                separated_data['afternoon_labels'].append(
+                    f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
 
-        separated_data['morning_labels'] = \
-            [f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}"
-            for date in separated_data['dates']]
-        separated_data['afternoon_labels'] = [
-            f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}"
-            for date in separated_data['dates']]
         return separated_data
 
     def _calculate_combined_states(self, start_date, end_date):
@@ -124,17 +122,21 @@ class ChartGenerator:
                                  combined_data['combined_labels'],
                                  title='\nZusammenfassung der Woche\n')
 
+        prev_label = ""
+        alpha = 0.5
+        for i, label in enumerate(combined_data['combined_labels']):
+            if label.split(".")[0] != prev_label.split(".")[0]:
+                alpha = 0.5 if alpha == 0 else 0
+            prev_label = label
+            plt.axhspan(i - 0.5, i + 0.5, facecolor='0.2', alpha=alpha)
+
         line_chart_buffer = io.BytesIO()
         plt.savefig(line_chart_buffer, dpi=fig.dpi, bbox_inches="tight", facecolor=fig.get_facecolor(),
                     edgecolor='none', format='png')
         line_chart_buffer.seek(0)
-        # TODO: Was ist mit line_chart_buffer.close() ?
-        return line_chart_buffer.read()
-
-    #         # Add padding
-    #         plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
-    #         fig.savefig('weekly.png', dpi=fig.dpi, bbox_inches="tight", facecolor=fig.get_facecolor(), edgecolor='none', format='png')
-    #         plt.show()
+        result = line_chart_buffer.read()
+        line_chart_buffer.close()
+        return result
 
     def _calculate_most_used(self, start_date, end_date):
         # Combine morning and afternoon data
@@ -186,10 +188,9 @@ class ChartGenerator:
         plt.savefig(bar_chart_buffer, dpi=fig.dpi, bbox_inches="tight", facecolor=fig.get_facecolor(), edgecolor='none',
                     format='png')
         bar_chart_buffer.seek(0)
-        # TODO: Was ist mit bar_chart_buffer.close() ?
-        return bar_chart_buffer.read()
-        # plt.savefig(filename, dpi=fig.dpi, bbox_inches="tight", facecolor=fig.get_facecolor(), edgecolor='none')
-        # plt.show()
+        result = bar_chart_buffer.read()
+        bar_chart_buffer.close()
+        return result
 
     def generate_bar_charts(self, start_date=None, end_date=None):
         top_mood_states, top_tasks = self._calculate_most_used(start_date, end_date)

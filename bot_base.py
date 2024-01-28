@@ -113,7 +113,8 @@ def migrate_user_data(application):
             if cengine:
                 print(f"Migrating user_data for {chat_id}")
                 user_data[KEY_STATE] = cengine.state
-                del user_data[KEY_CENGINE]
+                del application.user_data[chat_id][KEY_CENGINE]
+                del application.persistence.user_data[chat_id][KEY_CENGINE]
         except Exception as e:
             print(f"Migrating failed for {chat_id}")
             print(e)

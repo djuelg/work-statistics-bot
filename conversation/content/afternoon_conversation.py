@@ -1,3 +1,5 @@
+import random
+
 from conversation.content.generic_messages import GoodbyeMessage, HelloMessage, WavingCatSticker
 from conversation.content.questionaire_conversation import StressQuestion, \
     MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback, \
@@ -27,7 +29,7 @@ def create_afternoon_conversation():
 
 class QuestionnaireIntroductionMessage(Message):
     PROMPTS = [
-        "Mal sehen wie sich deine Selbsteinschätzung jetzt zum Nachmittag entwickelt hat. "
+        "Lass uns schauen, wie sich deine Selbsteinschätzung jetzt zum Nachmittag entwickelt hat. "
         "Bitte bewerte die folgenden Aussagen auf einer Skala von "
         "*Eins* ➔ _\"trifft gar nicht zu\"_ bis *Fünf* ➔ _\"trifft vollkommen zu\"_."
     ]
@@ -39,7 +41,10 @@ class QuestionnaireIntroductionMessage(Message):
 class PositiveProgressQuestion(SingleAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.{}.positive_progress'
     PROMPTS = [
-        "Hast du das Gefühl mit deinen morgendlichen Aufgaben gut vorangekommen zu sein? "
+        "Hast du das Gefühl mit deinen morgendlichen Aufgaben gut vorangekommen zu sein? ",
+        "Bist du gut mit deinen morgendlichen Aufgaben vorangekommen? ",
+        "Hat in Hinblick auf deine morgendlichen Aufgaben alles geklappt? ",
+        "Ging in Hinblick auf deine morgendlichen Aufgaben alles nach Plan? ",
     ]
     STATES = ["Ja", "Eher nicht"]
 
@@ -49,6 +54,8 @@ class PositiveProgressQuestion(SingleAnswerMessage):
 
 class PositiveProgressReaction(Message):
     CALLBACK_KEY = 'daily_questionnaire.{}.positive_progress'
+    POSITIVE_REACTION = ["Okay, schön zu hören. ", "Das freut mich zu hören!"]
+    NEGATIVE_REACTION = ["Tut mir leid zu hören. ", "Oh, das tut mir leid."]
 
     def __init__(self):
         super().__init__("")
@@ -56,7 +63,7 @@ class PositiveProgressReaction(Message):
     def content(self, cengine=None):
         positive_progress = cengine.get_state(self.CALLBACK_KEY.format(KEY_GROUPING_AFTERNOON))
         if positive_progress == "Ja":
-            self._content.text += "Okay, schön zu hören. "
+            self._content.text += random.choice(self.POSITIVE_REACTION)
         else:
-            self._content.text += "Okay, dann stellt sich die Frage, was das Problem sein könnte. "
+            self._content.text += random.choice(self.NEGATIVE_REACTION)
         return self._content
