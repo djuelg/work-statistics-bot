@@ -143,7 +143,7 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     # afternoon_time = morning_time + timedelta(seconds=30) # debug override
     afternoon_job_name = AFTERNOON_JOB.format(chat_id)
 
-    evening_time = morning_time.replace(hour=19, minute=37)
+    evening_time = morning_time.replace(hour=23, minute=37)
     # evening_time = morning_time + timedelta(seconds=50) # debug override
     evening_job_name = EVENING_JOB.format(chat_id)
 

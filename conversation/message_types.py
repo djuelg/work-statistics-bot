@@ -33,6 +33,12 @@ class Message:
         return self._content.text
 
 
+class NoOpMessage(Message):
+    def __init__(self):
+        self._sent = True
+        super(NoOpMessage, self).__init__("")
+
+
 class StickerMessage(Message):
     def __init__(self, sticker_id):
         self.sticker_id = sticker_id

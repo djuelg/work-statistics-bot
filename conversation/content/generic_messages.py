@@ -70,6 +70,6 @@ class MorningMessage(Message):
         super().__init__(self.PROMPTS)
 
     def content(self, cengine=None):
-        name = " " + cengine.get_state(NAME_KEY) if random.random() <= 0.2 else ""
+        name = " " + cengine.get_state(NAME_KEY) if random.random() <= 0.4 else ""
         self._content.text = self._content.text.format(name)
         return self._content

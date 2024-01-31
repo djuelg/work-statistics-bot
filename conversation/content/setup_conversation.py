@@ -111,7 +111,7 @@ class MultiAnswerExampleReaction(Message):
 
     def content(self, cengine=None):
         looking_forward_items = cengine.get_state(self.CALLBACK_KEY)
-        looking_forward_items = list(set(looking_forward_items)) or ["Anscheinend nichts"]
+        looking_forward_items = list(dict.fromkeys(looking_forward_items).keys()) or ["Anscheinend nichts"]
         self._content.text = f"Du freust dich auf: {', '.join(looking_forward_items)}"
         return self._content
 

@@ -25,8 +25,7 @@ class TasksQuestion(MultiAnswerMessage):
         "Wähle gerne aus den Beispielen unten, oder beschreibe es selbst."
     ]
     STATES = [
-        ["Coding", "Bugfixing", "Doku schreiben"],
-        ["Testen", "Ops-Aufgaben", "Konzeptionieren"],
+        ["Coding", "Organisation", "Haushalt"],
         ["Fertig"]
     ]
 

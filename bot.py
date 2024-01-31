@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 
@@ -14,7 +15,8 @@ from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.content.weekly_conversation import create_weekly_conversation
-from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED
+from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY
+from conversation.message_types import FreeformMessage
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -52,10 +54,18 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    json_str = json.dumps(context.user_data[KEY_STATE], indent=4)
-    await update.message.reply_text(
-        f'This is what you already told me: \n{json_str}'
-    )
+    await update.message.reply_text('Preparing data for display...')
+    state_copy = copy.deepcopy(context.user_data.get(KEY_STATE, {}))
+    history_copy = copy.deepcopy(state_copy.get(HISTORY_KEY, []))
+    history_copy = list(history_copy.items())[-min(len(history_copy), 7):]
+    del state_copy[HISTORY_KEY]
+    await update.message.reply_text('Current metadata:')
+    json_str = json.dumps(state_copy, indent=4)
+    await update.message.reply_text(json_str)
+    await update.message.reply_text('Recent history:')
+    for hkey, history_entry in history_copy:
+        json_str = json.dumps(history_entry, indent=4)
+        await update.message.reply_text(f'{hkey}: {json_str}')
 
 
 async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -102,7 +112,9 @@ async def handle_button_callbacks(update: Update, context: ContextTypes.DEFAULT_
 async def general_callback_handler(update, context, user_input):
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
     if cengine.is_waiting_for_user_input():
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        if isinstance(cengine.current_message, FreeformMessage):
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+
         cengine.handle_user_input(user_input)
 
         if not isinstance(cengine.current_message, MultiAnswerMessage) or user_input == MULTI_ANSWER_FINISHED:

@@ -13,7 +13,7 @@ class ChartGenerator:
         self._history = history
 
     def _flatmap_zip(self, list1, list2, offset=0.0):
-        return [(item -offset) if isinstance(item, float) else item for sublist in zip(list1, list2) for item in sublist]
+        return [(item - offset) if isinstance(item, float) else item for sublist in zip(list1, list2) for item in sublist]
 
     def _use_german_date(self, val):
         return datetime.strptime(val, '%Y-%m-%d').strftime('%d.%m.')
@@ -41,7 +41,7 @@ class ChartGenerator:
                 separated_data['morning_energy'].append(morning_data.get('energy_state', None))
                 separated_data['morning_stress'].append(morning_data.get('stress_state', None))
                 separated_data['morning_fatigue'].append(morning_data.get('mental_fatigue_state', None))
-                separated_data['morning_demotivation'].append(morning_data.get('demotivation_state', None))
+                separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
                 separated_data['morning_labels'].append(
                     f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}")
 
@@ -50,7 +50,7 @@ class ChartGenerator:
                 separated_data['afternoon_energy'].append(afternoon_data.get('energy_state', None))
                 separated_data['afternoon_stress'].append(afternoon_data.get('stress_state', None))
                 separated_data['afternoon_fatigue'].append(afternoon_data.get('mental_fatigue_state', None))
-                separated_data['afternoon_demotivation'].append(afternoon_data.get('demotivation_state', None))
+                separated_data['afternoon_demotivation'].append(afternoon_data.get('motivation_state', None))
                 separated_data['afternoon_labels'].append(
                     f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
 

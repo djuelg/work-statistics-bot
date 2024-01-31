@@ -3,7 +3,7 @@ import random
 from collections import deque
 from datetime import datetime
 
-from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message
+from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message, NoOpMessage
 
 KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
@@ -56,7 +56,7 @@ class ConversationEngine:
     def __init__(self, queue=None, state=None, current_message=None, freeform_client=None):
         self.queue = deque(queue) if queue is not None else deque()
         self.state = state or dict()
-        self.current_message = current_message
+        self.current_message = current_message or NoOpMessage()
         self.freeform_client = freeform_client
 
     def begin_new_conversation(self, conversation):
@@ -104,7 +104,7 @@ class ConversationEngine:
         recent_key = f'{KEY_GROUPING_RECENTLY}.{key.split(".")[-1]}'
         recent_items = self.get_state(recent_key) or []
         recent_items.insert(0, value)
-        recent_items = list(set(recent_items))[:min(recent_size, len(recent_items))]
+        recent_items = list(dict.fromkeys(recent_items).keys())[:min(recent_size, len(recent_items))]
         self.update_state(recent_key, recent_items)
 
     def _save_conversation_messages(self, role, current_message):
