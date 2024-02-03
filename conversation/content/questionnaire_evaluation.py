@@ -211,6 +211,7 @@ class QuestionnaireEvaluationExpert(GenericExpert):
     REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, und nicht " \
                               f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten für Dinge wie: "
     REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
+    REMEDY_TALK = f"Wenn du deine Situation ausführlicher besprechen möchtest, schreib mir einfach. Ansonsten ist das erstmal alles. Du schaffst das schon😌"
 
     STATE_NAMES = {
         "stress_state": "Stress Level",
@@ -241,7 +242,6 @@ class QuestionnaireEvaluationExpert(GenericExpert):
             answer += f"{self.STATE_NAMES[key]}: *{int(value)}*/5 \n"
         return answer
 
-
     def run(self):
         responses = []
         mood_states, most_severe_states, avg_mood, med_mood = self._create_mood_state_statistics()
@@ -269,6 +269,7 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                     responses.append(WhatElseMessage(text=self.REMEDEY_POMODORO, callback=expert.remedy_callback))
                 else:
                     responses.append(Message(text=self.REMEDEY_POMODORO))
+                    responses.append(FreeformMessage(text=self.REMEDY_TALK))
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
 
             else:

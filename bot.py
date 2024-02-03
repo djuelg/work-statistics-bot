@@ -15,7 +15,7 @@ from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
 from conversation.content.weekly_conversation import create_weekly_conversation
-from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY
+from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY, CURRENT_CONVERSATION_KEY
 from conversation.message_types import FreeformMessage
 
 logging.basicConfig(
@@ -59,13 +59,15 @@ async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     history_copy = copy.deepcopy(state_copy.get(HISTORY_KEY, []))
     history_copy = list(history_copy.items())[-min(len(history_copy), 7):]
     del state_copy[HISTORY_KEY]
+    if CURRENT_CONVERSATION_KEY in state_copy and 'messages' in state_copy[CURRENT_CONVERSATION_KEY]:
+        del state_copy[CURRENT_CONVERSATION_KEY]['messages']
     await update.message.reply_text('Current metadata:')
     json_str = json.dumps(state_copy, indent=4)
-    await update.message.reply_text(json_str)
+    await update.message.reply_text(json_str[:4096])
     await update.message.reply_text('Recent history:')
     for hkey, history_entry in history_copy:
         json_str = json.dumps(history_entry, indent=4)
-        await update.message.reply_text(f'{hkey}: {json_str}')
+        await update.message.reply_text(f'{hkey}: {json_str}'[:4096])
 
 
 async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

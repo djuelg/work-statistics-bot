@@ -77,10 +77,12 @@ async def send_next_messages(bot, cengine, chat_id):
             media_group = [InputMediaPhoto(image) for image in message.media_group]
             await bot.send_media_group(chat_id, media_group)
         else:
-            await bot.send_message(
-                chat_id=chat_id, text=message.content(cengine=cengine).text, reply_markup=reply_markup,
-                parse_mode='markdown', disable_web_page_preview=True  # TODO: ggf. switch to MarkdownV2
-            )
+            message_text = message.content(cengine=cengine).text
+            if message_text:
+                await bot.send_message(
+                    chat_id=chat_id, text=message_text, reply_markup=reply_markup,
+                    parse_mode='markdown', disable_web_page_preview=True  # TODO: ggf. switch to MarkdownV2
+                )
 
         message.mark_as_sent()
         if cengine.is_waiting_for_user_input():
