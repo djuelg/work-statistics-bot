@@ -1,68 +1,21 @@
 import random
 
-from conversation.message_types import SingleAnswerMessage, Message, FreeformMessage
+from conversation.content.generic_messages import WhatElseMessage, MEDITATION_LINK, remedy_callback, \
+    GenericRemedyMessage, ExpertSpecificationQuestion
+from conversation.message_types import Message, FreeformMessage
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
 KEY_GROUPING_AFTERNOON = 'afternoon'
 KEY_GROUPING_MORNING = 'morning'
 
-BAD_MOOD_CONSTANT = 4
+BAD_MOOD_CONSTANT = 3.5
 GOOD_MOOD_CONSTANT = 2
-
-MATRIX_LINK = "https://www.orghandbuch.de/OHB/DE/OrganisationshandbuchNEU/4_MethodenUndTechniken/Methoden_A_bis_Z/Eisenhower_Matrix/Eisenhower_Matrix_node.html"
-SPORT_LINK = "https://www.youtube.com/results?search_query=5+minute+warmup+tabata"
-YOGA_LINK = "https://www.youtube.com/results?search_query=easy+10+minute+yoga-routine"
-MEDITATION_LINK = "https://www.youtube.com/results?search_query=10+minute+guided+meditation"
-BREATHING_LINK = "https://www.youtube.com/results?search_query=5+minute+breathing+exercise"
 
 FREEFORM_CLIENT_DESCRIPTION = "Du bist ein Assistent, der mit dem User erfasst, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. " \
                       "Besser als konkrete Empfehlungen sind in manchen Situationen Rückfragen, die zur Selbstreflexion anregen." \
                       "Halte dich an Fakten und belege diese mit seriösen Quellen, z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie. " \
                       "Drücke dich kurz, präzise und empathisch aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. " \
                       "Verwende weniger als 100 completion_tokens."
-
-
-class GenericRemedyMessage(Message):
-    PROMPTS = [
-        f"• *Den Kreislauf aktivieren:* Bspw. wenn du stehend arbeitest, kurz spazieren gehst, oder eine kleine [Sport-]({SPORT_LINK}) "
-        f"oder [Yoga-Routine]({YOGA_LINK}) einlegst. \n"
-         "• *Sprich mit jemandem:* Führe ein kurzes Gespräch mit jemandem in deiner Nähe, oder rufe Freunde an. \n"
-         "• *Schreib deine Gedanken auf:* Nimm dir kurz Zeit, um deine Gedanken auf Papier zu bringen. Das kann helfen, sie zu ordnen und einen klaren Kopf zu bekommen. \n"
-         f"• *Eine Achtsamkeitsübung machen:* Sich ein paar Momente für bspw. [Meditation]({MEDITATION_LINK}) oder [Atemübungen]({BREATHING_LINK}) nehmen \n"
-         "• *Mach etwas anderes:* Erledige etwas kleines, wofür du eher die Muße hast und mach danach mit deiner eigentlichen Aufgabe weiter. \n"
-    ]
-
-    def __init__(self):
-        super().__init__(self.PROMPTS)
-
-
-def remedy_callback(key, value, cengine=None, is_multi_answer_finished=False):
-    if value == WhatElseMessage.ANSWER_WHAT_ELSE:
-        return [
-            Message(text="Meist lohnt es sich ein paar Minuten Arbeitszeit zu opfern und die Aufgaben danach wieder mit einem frischeren Kopf anzugehen"),
-                GenericRemedyMessage(),
-            Message(
-                text=["In einigen Situation kann auch folgendes hilfreich sein:", "Je nach Situation kann auch folgendes hilfreich sein:"]),
-        ]
-    elif value == WhatElseMessage.ANSWER_FREETEXT:
-        return [FreeformMessage(text=["Okay, dann schieß los!", "Gut, erzähl mal."])]
-    else:
-        return [Message(text=["Okay, das wars erstmal.", "Dann wars das erstmal.", "Gut, dann wars das vorerst."])]
-
-
-class WhatElseMessage(SingleAnswerMessage):
-    WHAT_ELSE_CALLBACK_KEY = 'daily_questionnaire.remedy.what_else'
-    ANSWER_ENOUGH = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_ENOUGH'
-    ANSWER_WHAT_ELSE = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_WHAT_ELSE'
-    ANSWER_FREETEXT = f'{WHAT_ELSE_CALLBACK_KEY}.ANSWER_FREETEXT'
-    STATES = [
-        [("Das reicht an Infos", ANSWER_ENOUGH)],
-        [("Was kann ich sonst noch tun?", ANSWER_WHAT_ELSE)],
-        [("Ich möchte meine Situation beschreiben", ANSWER_FREETEXT)]
-    ]
-
-    def __init__(self, text, callback=remedy_callback):
-        super().__init__(text, self.WHAT_ELSE_CALLBACK_KEY, callback, self.STATES)
 
 
 class GenericExpert:
@@ -96,16 +49,10 @@ class StressExpert(GenericExpert):
                    "Wenn das nicht möglich ist, blockiere dir schonmal eine feste Zeit zum Entspannen in der Zukunft."
 
     def run(self):
-        is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
-        responses = [Message(text=self.STRESS_INTRODUCTION)]
-
         # TODO Später: Z.B. Fragen ob Achtsamkeitsübungen überhaupt für einen etwas sind
         # TODO Später: Bzw. Zum Denken anregen: Auf welche Entspannung würdest du dich freuen?
-        if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(text=self.REMEDY_RELAX))
-        else:
-            responses.append(WhatElseMessage(text=self.REMEDY_RELAX, callback=self.get_more_info_callback))
-        return responses
+        return [Message(text=self.STRESS_INTRODUCTION),
+                WhatElseMessage(text=self.REMEDY_RELAX, callback=self.get_more_info_callback)]
 
     def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
         messages = remedy_callback(key, value, cengine, is_multi_answer_finished)
@@ -131,10 +78,9 @@ class MentalFatigueExpert(GenericExpert):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
             responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_1))
-            responses.append(Message(text=self.REMEDY_SLOW_DOWN))
         else:
             responses.append(Message(text=self.MENTAL_FATIGUE_INTRODUCTION + self.REMEDY_PAUSES_2))
-            responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN, callback=self.get_more_info_callback))
+        responses.append(WhatElseMessage(self.REMEDY_SLOW_DOWN, callback=self.get_more_info_callback))
         return responses
 
     def get_more_info_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
@@ -163,7 +109,7 @@ class SleepinessExpert(GenericExpert):
         introduction += self.SLEEPINESS_INTRODUCTION_3
         responses = [Message(text=introduction)]
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(text=self.REMEDY_NAP))
+            responses.append(WhatElseMessage(text=self.REMEDY_NAP))
         else:
             responses.append(Message(text=self.REMEDEY_POMODORO))
             responses.append(WhatElseMessage(text=self.REMEDY_NAP))
@@ -189,7 +135,7 @@ class DemotivationExpert(GenericExpert):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
         responses = [Message(text=self.DEMOTIVATION_INTRODUCTION), Message(text=self.REMEDY_CELEBRATE)]
         if is_generic_remedy_shown and not isinstance(is_generic_remedy_shown, dict):
-            responses.append(Message(self.REMEDY_PAUSES_1))
+            responses.append(WhatElseMessage(self.REMEDY_PAUSES_1, callback=self.get_more_info_callback))
         else:
             responses.append(WhatElseMessage(self.REMEDY_PAUSES_2, callback=self.get_more_info_callback))
         return responses
@@ -209,12 +155,13 @@ class QuestionnaireEvaluationExpert(GenericExpert):
     SOME_BAD_RESPONSE = "Deine Bewertung ergibt einen Durchschnitt von {}/5, und es lässt sich erkennen, dass du bestimmte Aspekte des Tages als anspruchsvoll empfunden hast."
     BAD_RESPONSE = "Der Durchschnitt von {}/5 deutet darauf hin, dass es dir allgemein nicht so gut zu gehen scheint."
     REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, und nicht " \
-                              f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten für Dinge wie: "
+                              f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten, z.B. mit Hilfe des @pomodoro\_timer\_bot."
     REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
     REMEDY_TALK = f"Wenn du deine Situation ausführlicher besprechen möchtest, schreib mir einfach. Ansonsten ist das erstmal alles. Du schaffst das schon😌"
+    REMEDY_GENERIC = "Okay, hier noch ein paar Ideen, wofür du die Pausen nutzen könntest: "
 
     STATE_NAMES = {
-        "stress_state": "Stress Level",
+        "stress_state": "Stress",
         "mental_fatigue_state": "Mentale Ermüdung",
         "energy_state": "Schläfrigkeit",
         "motivation_state": "Unlust",
@@ -242,51 +189,37 @@ class QuestionnaireEvaluationExpert(GenericExpert):
             answer += f"{self.STATE_NAMES[key]}: *{int(value)}*/5 \n"
         return answer
 
+    def specify_expert_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        if value in self.STATE_EXPERTS.keys():
+            expert = self.STATE_EXPERTS[value](self._cengine, self._key_base)
+            responses = expert.run()
+            responses.reverse()
+            return responses
+        else:
+            return [GenericRemedyMessage(), Message(text=self.REMEDY_GENERIC)]
+
     def run(self):
-        responses = []
         mood_states, most_severe_states, avg_mood, med_mood = self._create_mood_state_statistics()
+        responses = [Message(text=self.THANKS), Message(text=self.short_evaluation(mood_states))]
 
         if not most_severe_states and med_mood < BAD_MOOD_CONSTANT:
-            responses.append(Message(text=self.THANKS))
-            responses.append(Message(text=self.short_evaluation(mood_states)))
             if med_mood <= GOOD_MOOD_CONSTANT:
                 responses.append(Message(text=self.HAPPY_RESPONSE))
             else:
                 responses.append(Message(text=self.MEDIOCRE_RESPONSE.format(med_mood)))
-        elif most_severe_states or med_mood >= BAD_MOOD_CONSTANT:
-            most_severe_two = random.sample(list(most_severe_states.items()), k=2) \
-                if len(most_severe_states.items()) >= 2 else list(most_severe_states.items())
-            responses.append(Message(text=self.THANKS))
-            responses.append(Message(text=self.short_evaluation(mood_states)))
 
-            if med_mood >= BAD_MOOD_CONSTANT:
-                responses.append(Message(text=self.BAD_RESPONSE.format(med_mood)))
-                responses.append(Message(text=self.REMEDY_LOW_EXPECTATIONS))
-                responses.append(GenericRemedyMessage())
-
-                if most_severe_two and most_severe_two[0][1] == 5:
-                    expert = self.STATE_EXPERTS[most_severe_two[0][0]](self._cengine, self._key_base)
-                    responses.append(WhatElseMessage(text=self.REMEDEY_POMODORO, callback=expert.remedy_callback))
-                else:
-                    responses.append(Message(text=self.REMEDEY_POMODORO))
-                    responses.append(FreeformMessage(text=self.REMEDY_TALK))
+        elif most_severe_states:
+            if len(most_severe_states) >= 2:
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
-
+                responses.append(Message(text=self.BAD_RESPONSE.format(avg_mood)))
+                responses.append(Message(text=self.REMEDY_LOW_EXPECTATIONS))
+                answers = [(self.STATE_NAMES[key], key) for key in most_severe_states]
+                responses.append(ExpertSpecificationQuestion(callback=self.specify_expert_callback, answers=answers))
             else:
-                if most_severe_two:
-                    if med_mood >= BAD_MOOD_CONSTANT and most_severe_two[0][1] == 5:
-                        expert = self.STATE_EXPERTS[most_severe_two[0][0]](self._cengine, self._key_base)
-                        responses.extend(expert.run())
-                    else:
-                        for state_pair in most_severe_two:
-                            expert = self.STATE_EXPERTS[state_pair[0]](self._cengine, self._key_base)
-                            responses.extend(expert.run())
-                else:
-                    responses.append(Message(text=self.SOME_BAD_RESPONSE.format(med_mood)))
+                expert = self.STATE_EXPERTS[next(iter(most_severe_states))](self._cengine, self._key_base)
+                responses.extend(expert.run())
 
         # TODO: Veränderungen zu vormittag / gestern einarbeiten
 
         responses.reverse()
         return responses
-
-
