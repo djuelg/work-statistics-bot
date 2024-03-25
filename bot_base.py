@@ -219,7 +219,8 @@ async def create_weekly_charts(cengine):
             start_date=start_date, end_date=end_date)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
         return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 
@@ -237,7 +238,8 @@ async def create_monthly_charts(cengine):
             start_date=start_date, end_date=end_date, compact=True)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
         return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
-    except:
+    except Exception as e:
+        print(e)
         return None
 
 
