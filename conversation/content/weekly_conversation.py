@@ -1,11 +1,12 @@
-from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker
+from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker, HelloAgainMessage, \
+    ProblematicDataMessage, ReflectionMessage
 from conversation.message_types import Message, ImageGroupMessage
 
 
 def create_weekly_conversation(images):
     messages = [MorningMessage(), ]
     if images:
-        messages.extend([WeeklyIntroductionMessage(), ImageGroupMessage(images), WeeklyReflectionMessage(),
+        messages.extend([WeeklyIntroductionMessage(), ImageGroupMessage(images), ReflectionMessage(),
                          WeeklyGoodbyeMessage(), YawningCatSticker()])
     else:
         messages.extend([ProblematicDataMessage(), GoodbyeMessage(), YawningCatSticker()])
@@ -20,23 +21,6 @@ class WeeklyIntroductionMessage(Message):
     def __init__(self):
         super().__init__(self.PROMPTS)
 
-
-class WeeklyReflectionMessage(Message):
-    PROMPTS = [
-        "Sollten Dimensionen konstant im höheren Bereich liegen, nimm dir am Besten Zeit darüber nachzudenken woran das liegen könnte "
-        "und was du tun kannst um deine Umstände zu verbessern. Vielleicht fallen die Werte aber auch besser aus als du gedacht hättest."
-    ]
-
-    def __init__(self):
-        super().__init__(self.PROMPTS)
-
-class ProblematicDataMessage(Message):
-    PROMPTS = [
-        "Leider konnte ich diese Woche keine Statistiken aus deinen Angaben erzeugen. Dann eben nächstes mal wieder!",
-    ]
-
-    def __init__(self):
-        super().__init__(self.PROMPTS)
 
 class WeeklyGoodbyeMessage(Message):
     PROMPTS = [

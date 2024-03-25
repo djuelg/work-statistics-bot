@@ -1,3 +1,5 @@
+import calendar
+import locale
 import os
 import pickle
 from datetime import datetime, timedelta
@@ -7,10 +9,11 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from telegram.ext import ContextTypes, Application
 
 from conversation.content.afternoon_conversation import create_afternoon_conversation
+from conversation.content.weekly_conversation import create_weekly_conversation
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.questionnaire_evaluation import FREEFORM_CLIENT_DESCRIPTION
 from conversation.content.setup_conversation import WorkBeginQuestion
-from conversation.content.weekly_conversation import create_weekly_conversation
+from conversation.content.monthly_conversation import create_monthly_conversation
 from conversation.engine import ConversationEngine, HISTORY_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, StickerMessage, ImageMessage, \
     ImageGroupMessage
@@ -39,7 +42,8 @@ MORNING_JOB = "{}_morning_message"
 AFTERNOON_JOB = "{}_afternoon_message"
 EVENING_JOB = "{}_evening_message"
 WEEKLY_JOB = "{}_weekly_message"
-JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB, WEEKLY_JOB]
+MONTHLY_JOB = "{}_monthly_message"
+JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB, WEEKLY_JOB, MONTHLY_JOB]
 
 global_cengine_cache = {}  # Global cache that holds pairs of (chat_id -> cengine)
 
@@ -141,7 +145,7 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)
     morning_job_name = MORNING_JOB.format(chat_id)
 
-    afternoon_time = morning_time + timedelta(hours=4, minutes=15)
+    afternoon_time = morning_time + timedelta(hours=4, minutes=45)
     # afternoon_time = morning_time + timedelta(seconds=30) # debug override
     afternoon_job_name = AFTERNOON_JOB.format(chat_id)
 
@@ -150,6 +154,8 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     evening_job_name = EVENING_JOB.format(chat_id)
 
     weekly_job_name = WEEKLY_JOB.format(chat_id)
+    monthly_time = morning_time.replace(hour=20, minute=00)
+    monthly_job_name = MONTHLY_JOB.format(chat_id)
 
     job_data = (application, context)
     job_queue = job_queue or context.job_queue
@@ -162,6 +168,8 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
                         data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
     job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=weekly_job_name,
                         days=DAYS_SUN, data=job_data, job_kwargs={'id': weekly_job_name, 'replace_existing': True})
+    job_queue.run_monthly(jobqueue_callback, day=-1, when=monthly_time, chat_id=chat_id, name=monthly_job_name,
+                          data=job_data, job_kwargs={'id': monthly_job_name, 'replace_existing': True})
 
 
 async def jobqueue_callback(context: ContextTypes.user_data) -> None:
@@ -178,8 +186,10 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
         del global_cengine_cache[context.job.chat_id]
         return
     elif context.job.name == MORNING_JOB.format(context.job.chat_id):
+        cengine.drop_state(KEY_MORNING_QUESTIONNAIRE)
         conversation = create_morning_conversation()
     elif context.job.name == AFTERNOON_JOB.format(context.job.chat_id):
+        cengine.drop_state(KEY_AFTERNOON_QUESTIONNAIRE)
         conversation = create_afternoon_conversation()
     elif context.job.name == EVENING_JOB.format(context.job.chat_id):
         cengine.copy_today_to_history()
@@ -187,6 +197,9 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     elif context.job.name == WEEKLY_JOB.format(context.job.chat_id):
         charts = await create_weekly_charts(cengine)
         conversation = create_weekly_conversation(charts)
+    elif context.job.name == MONTHLY_JOB.format(context.job.chat_id):
+        charts = await create_monthly_charts(cengine)
+        conversation = create_monthly_conversation(charts)
     else:
         return
 
@@ -201,7 +214,27 @@ async def create_weekly_charts(cengine):
         chart_generator = ChartGenerator(history)
         start_date = str((datetime.now() - timedelta(days=7)).date())
         end_date = str(datetime.now().date())
-        line_chart_buffer = chart_generator.generate_line_chart(start_date=start_date, end_date=end_date)
+        cal_week = (datetime.now() - timedelta(days=7)).isocalendar()[1]
+        line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung KW {cal_week}\n',
+            start_date=start_date, end_date=end_date)
+        tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
+        return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
+    except:
+        return None
+
+
+async def create_monthly_charts(cengine):
+    history = cengine.get_state(HISTORY_KEY)
+    try:
+        chart_generator = ChartGenerator(history)
+        current_date = datetime.now()
+        _, num_days = calendar.monthrange(current_date.year, current_date.month)
+        start_date = str(datetime(current_date.year, current_date.month, 1).date())
+        end_date = str(datetime(current_date.year, current_date.month, num_days).date())
+        locale.setlocale(locale.LC_TIME, "de_DE.utf8")
+        month_name = current_date.strftime("%B")
+        line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung {month_name}\n',
+            start_date=start_date, end_date=end_date, compact=True)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
         return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
     except:

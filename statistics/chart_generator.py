@@ -1,4 +1,5 @@
 import io
+import re
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ class ChartGenerator:
     def _use_german_date(self, val):
         return datetime.strptime(val, '%Y-%m-%d').strftime('%d.%m.')
 
-    def _calculate_separated_states(self, start_date, end_date):
+    def _calculate_separated_states(self, start_date, end_date, compact=False):
         separated_data = {'dates': [],
                           'morning_labels': [],
                           'morning_energy': [],
@@ -42,8 +43,12 @@ class ChartGenerator:
                 separated_data['morning_stress'].append(morning_data.get('stress_state', None))
                 separated_data['morning_fatigue'].append(morning_data.get('mental_fatigue_state', None))
                 separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
-                separated_data['morning_labels'].append(
-                    f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}")
+                if not compact:
+                    separated_data['morning_labels'].append(
+                        f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}")
+                else:
+                    separated_data['morning_labels'].append(
+                        f"$\\bf{{{self._use_german_date(date)}}}$ Morgens")
 
                 # Extract afternoon data
                 afternoon_data = day_data.get('afternoon', {})
@@ -51,13 +56,17 @@ class ChartGenerator:
                 separated_data['afternoon_stress'].append(afternoon_data.get('stress_state', None))
                 separated_data['afternoon_fatigue'].append(afternoon_data.get('mental_fatigue_state', None))
                 separated_data['afternoon_demotivation'].append(afternoon_data.get('motivation_state', None))
-                separated_data['afternoon_labels'].append(
-                    f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
+                if not compact:
+                    separated_data['afternoon_labels'].append(
+                        f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
+                else:
+                    separated_data['afternoon_labels'].append(
+                        f"Mittags")
 
         return separated_data
 
-    def _calculate_combined_states(self, start_date, end_date):
-        sep_data = self._calculate_separated_states(start_date, end_date)
+    def _calculate_combined_states(self, start_date, end_date, compact=False):
+        sep_data = self._calculate_separated_states(start_date, end_date, compact=compact)
 
         # Combine morning and afternoon data
         combined_dates = self._flatmap_zip(sep_data['dates'], sep_data['dates'])
@@ -75,19 +84,21 @@ class ChartGenerator:
                 'combined_labels': combined_labels,
                 }
 
-    def _prepare_line_chart(self, ax, energy, stress, fatigue, demotivation, labels, title):
+    def _prepare_line_chart(self, ax, energy, stress, fatigue, demotivation, labels, title, compact=False):
         median_energy = np.average([value for value in energy if value is not None])
         median_stress = np.average([value for value in stress if value is not None])
         median_fatigue = np.average([value for value in fatigue if value is not None])
         median_demotivation = np.average([value for value in demotivation if value is not None])
+        linewidth = 5.0 if not compact else 3.0
+        markersize = 24 if not compact else 18
         ax.plot(energy, range(len(labels)), label=f'Schläfrigkeit (Avg: {median_energy:.2f})', marker='o',
-                markersize=24, linestyle='solid', alpha=1, color='skyblue', linewidth=5.0)
+                markersize=markersize, linestyle='solid', alpha=1, color='skyblue', linewidth=linewidth)
         ax.plot(fatigue, range(len(labels)), label=f'Mentale Ermüdung (Avg: {median_fatigue:.2f})', marker='o',
-                markersize=24, linestyle='solid', alpha=1, color='palegreen', linewidth=5.0)
+                markersize=markersize, linestyle='solid', alpha=1, color='palegreen', linewidth=linewidth)
         ax.plot(demotivation, range(len(labels)), label=f'Unlust (Avg: {median_demotivation:.2f})', marker='o',
-                markersize=24, linestyle='solid', alpha=1, color='wheat', linewidth=5.0)
-        ax.plot(stress, range(len(labels)), label=f'Stress Level (Avg: {median_stress:.2f})', marker='o', markersize=24,
-                linestyle='solid', alpha=1, color='coral', linewidth=5.0)
+                markersize=markersize, linestyle='solid', alpha=1, color='wheat', linewidth=linewidth)
+        ax.plot(stress, range(len(labels)), label=f'Stress Level (Avg: {median_stress:.2f})', marker='o', markersize=markersize,
+                linestyle='solid', alpha=1, color='coral', linewidth=linewidth)
         # ax.set_xlabel('Höhe', color='white')  # Set text color
         ax.set_title(title, fontweight='light', fontsize=32, color='white')  # Adjust title font and color
         ax.set_yticks(range(len(labels)))
@@ -105,13 +116,13 @@ class ChartGenerator:
         frame.set_facecolor('#404040')
         frame.set_linewidth(0)
 
-    def generate_line_chart(self, start_date=None, end_date=None):
-        combined_data = self._calculate_combined_states(start_date, end_date)
+    def generate_line_chart(self, title, start_date=None, end_date=None, compact=False):
+        combined_data = self._calculate_combined_states(start_date, end_date, compact=compact)
 
         # Plotting the combined data
         style.use('dark_background')  # Use a dark mode-like style
         plt.style.use('dark_background')
-        fig, ax = plt.subplots(figsize=(10, 16))
+        fig, ax = plt.subplots(figsize=(10, 20 if compact else 16))
         fig.patch.set_facecolor('#404040')
 
         self._prepare_line_chart(ax,
@@ -120,14 +131,12 @@ class ChartGenerator:
                                  combined_data['combined_fatigue'],
                                  combined_data['combined_demotivation'],
                                  combined_data['combined_labels'],
-                                 title='\nZusammenfassung der Woche\n')
+                                 title=title, compact=compact)
 
-        prev_label = ""
         alpha = 0.5
         for i, label in enumerate(combined_data['combined_labels']):
-            if label.split(".")[0] != prev_label.split(".")[0]:
+            if re.search(r'(Morgens|Mittags)', label).group() == 'Morgens':
                 alpha = 0.5 if alpha == 0 else 0
-            prev_label = label
             plt.axhspan(i - 0.5, i + 0.5, facecolor='0.2', alpha=alpha)
 
         line_chart_buffer = io.BytesIO()

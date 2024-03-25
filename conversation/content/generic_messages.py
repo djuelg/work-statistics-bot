@@ -82,6 +82,39 @@ class HelloMessage(Message):
         return self._content
 
 
+class HelloAgainMessage(Message):
+    PROMPTS = [
+        "Hey{}! Ich bins nochmal.",
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS)
+
+    def content(self, cengine=None):
+        name = " " + cengine.get_state(NAME_KEY) if random.random() <= 0.4 else ""
+        self._content.text = self._content.text.format(name)
+        return self._content
+
+
+class ProblematicDataMessage(Message):
+    PROMPTS = [
+        "Leider konnte ich keine Statistiken aus deinen Angaben erzeugen. Dann eben nächstes mal wieder!",
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS)
+
+
+class ReflectionMessage(Message):
+    PROMPTS = [
+        "Sollten Dimensionen konstant im höheren Bereich liegen, nimm dir am Besten Zeit darüber nachzudenken woran das liegen könnte "
+        "und was du tun kannst um deine Umstände zu verbessern. Vielleicht fallen die Werte aber auch besser aus als du gedacht hättest."
+    ]
+
+    def __init__(self):
+        super().__init__(self.PROMPTS)
+
+
 class ThumbsUpCatSticker(StickerMessage):
     ID = "CAACAgIAAxkBAAEoYeNlhK4C3Eqmy297ceXoI6W1E5KnPAACP0YAAg_EKEh1NETO709qWDME"
 

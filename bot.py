@@ -9,12 +9,13 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 
 from bot_base import get_conversation_engine, send_next_messages, JOB_NAMES, global_cengine_cache, \
     create_weekly_charts, setup_jobqueue_callbacks, KEY_MORNING_QUESTIONNAIRE, KEY_AFTERNOON_QUESTIONNAIRE, BOT_TOKEN, \
-    setup_jobqueue_after_startup, WEBHOOK_URL, KEY_STATE
+    setup_jobqueue_after_startup, WEBHOOK_URL, KEY_STATE, create_monthly_charts
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.generic_messages import ByeCatSticker
+from conversation.content.weekly_conversation import create_weekly_conversation
 from conversation.content.morning_conversation import create_morning_conversation
 from conversation.content.setup_conversation import create_setup_conversation, WorkBeginQuestion
-from conversation.content.weekly_conversation import create_weekly_conversation
+from conversation.content.monthly_conversation import create_monthly_conversation
 from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY, CURRENT_CONVERSATION_KEY
 from conversation.message_types import FreeformMessage
 
@@ -78,6 +79,14 @@ async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_T
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 
 
+async def show_monthly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
+    charts = await create_monthly_charts(cengine)
+    conversation = create_monthly_conversation(charts)
+    cengine.begin_new_conversation(conversation)
+    await send_next_messages(context.bot, cengine, update.effective_chat.id)
+
+
 async def override_morning(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
     cengine.drop_state(KEY_MORNING_QUESTIONNAIRE)
@@ -137,6 +146,7 @@ if __name__ == '__main__':
     stop_handler = CommandHandler('stop_and_delete', stop)
     show_handler = CommandHandler('show', show_data)
     show_weekly_handler = CommandHandler('show_weekly', show_weekly_statistics)
+    show_monthly_handler = CommandHandler('show_monthly', show_monthly_statistics)
     override_setup_handler = CommandHandler('override_setup', override_setup)
     override_morning_handler = CommandHandler('override_morning', override_morning)
     override_afternoon_handler = CommandHandler('override_afternoon', override_afternoon)
@@ -148,6 +158,7 @@ if __name__ == '__main__':
     application.add_handler(stop_handler)
     application.add_handler(show_handler)
     application.add_handler(show_weekly_handler)
+    application.add_handler(show_monthly_handler)
     application.add_handler(override_setup_handler)
     application.add_handler(override_morning_handler)
     application.add_handler(override_afternoon_handler)
