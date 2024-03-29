@@ -9,7 +9,8 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 
 from bot_base import get_conversation_engine, send_next_messages, JOB_NAMES, global_cengine_cache, \
     create_weekly_charts, setup_jobqueue_callbacks, KEY_MORNING_QUESTIONNAIRE, KEY_AFTERNOON_QUESTIONNAIRE, BOT_TOKEN, \
-    setup_jobqueue_after_startup, WEBHOOK_URL, KEY_STATE, create_monthly_charts
+    setup_jobqueue_after_startup, WEBHOOK_URL, KEY_STATE, create_monthly_charts, create_monthly_statistics, \
+    create_weekly_statistics
 from conversation.content.afternoon_conversation import create_afternoon_conversation
 from conversation.content.generic_messages import ByeCatSticker
 from conversation.content.weekly_conversation import create_weekly_conversation
@@ -18,6 +19,7 @@ from conversation.content.setup_conversation import create_setup_conversation, W
 from conversation.content.monthly_conversation import create_monthly_conversation
 from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY, CURRENT_CONVERSATION_KEY
 from conversation.message_types import FreeformMessage
+from statistics.chart_generator import CumulatedDataGenerator
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -73,16 +75,22 @@ async def show_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def show_weekly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    charts = await create_weekly_charts(cengine)
-    conversation = create_weekly_conversation(charts)
+    history = cengine.get_state(HISTORY_KEY)
+    data_generator = CumulatedDataGenerator(history)
+    stats = await create_weekly_statistics(data_generator)
+    charts = await create_weekly_charts(data_generator)
+    conversation = create_weekly_conversation(stats, charts)
     cengine.begin_new_conversation(conversation)
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 
 
 async def show_monthly_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    charts = await create_monthly_charts(cengine)
-    conversation = create_monthly_conversation(charts)
+    history = cengine.get_state(HISTORY_KEY)
+    data_generator = CumulatedDataGenerator(history)
+    stats = await create_monthly_statistics(data_generator)
+    charts = await create_monthly_charts(data_generator)
+    conversation = create_monthly_conversation(stats, charts)
     cengine.begin_new_conversation(conversation)
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 

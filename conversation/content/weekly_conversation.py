@@ -1,13 +1,13 @@
-from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker, HelloAgainMessage, \
-    ProblematicDataMessage, ReflectionMessage
+from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker, \
+    ProblematicDataMessage, CumulatedStatisticsMessage, FrequentDimensionsMessage
 from conversation.message_types import Message, ImageGroupMessage
 
 
-def create_weekly_conversation(images):
+def create_weekly_conversation(stats, images):
     messages = [MorningMessage(), ]
     if images:
-        messages.extend([WeeklyIntroductionMessage(), ImageGroupMessage(images), ReflectionMessage(),
-                         WeeklyGoodbyeMessage(), YawningCatSticker()])
+        messages.extend([WeeklyIntroductionMessage(), CumulatedStatisticsMessage(stats), ImageGroupMessage(images),
+                         FrequentDimensionsMessage(stats), WeeklyGoodbyeMessage(), YawningCatSticker()])
     else:
         messages.extend([ProblematicDataMessage(), GoodbyeMessage(), YawningCatSticker()])
     return messages

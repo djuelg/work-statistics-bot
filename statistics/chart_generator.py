@@ -7,19 +7,22 @@ import matplotlib.style as style
 import numpy as np
 
 
-class ChartGenerator:
-    NEWLINE = '\n'
+NEWLINE = '\n'
+
+
+class CumulatedDataGenerator:
 
     def __init__(self, history):
         self._history = history
 
     def _flatmap_zip(self, list1, list2, offset=0.0):
-        return [(item - offset) if isinstance(item, float) else item for sublist in zip(list1, list2) for item in sublist]
+        return [(item - offset) if isinstance(item, float) else item for sublist in zip(list1, list2) for item in
+                sublist]
 
     def _use_german_date(self, val):
         return datetime.strptime(val, '%Y-%m-%d').strftime('%d.%m.')
 
-    def _calculate_separated_states(self, start_date, end_date, compact=False):
+    def calculate_separated_states(self, start_date, end_date, compact=False):
         separated_data = {'dates': [],
                           'morning_labels': [],
                           'morning_energy': [],
@@ -45,7 +48,7 @@ class ChartGenerator:
                 separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
                 if not compact:
                     separated_data['morning_labels'].append(
-                        f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{self.NEWLINE.join(self._history[date]['morning']['tasks'])}")
+                        f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{NEWLINE.join(self._history[date]['morning']['tasks'])}")
                 else:
                     separated_data['morning_labels'].append(
                         f"$\\bf{{{self._use_german_date(date)}}}$ Morgens")
@@ -58,15 +61,15 @@ class ChartGenerator:
                 separated_data['afternoon_demotivation'].append(afternoon_data.get('motivation_state', None))
                 if not compact:
                     separated_data['afternoon_labels'].append(
-                        f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{self.NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
+                        f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
                 else:
                     separated_data['afternoon_labels'].append(
                         f"Mittags")
 
         return separated_data
 
-    def _calculate_combined_states(self, start_date, end_date, compact=False):
-        sep_data = self._calculate_separated_states(start_date, end_date, compact=compact)
+    def calculate_combined_states(self, start_date, end_date, compact=False):
+        sep_data = self.calculate_separated_states(start_date, end_date, compact=compact)
 
         # Combine morning and afternoon data
         combined_dates = self._flatmap_zip(sep_data['dates'], sep_data['dates'])
@@ -83,6 +86,98 @@ class ChartGenerator:
                 'combined_demotivation': combined_demotivation,
                 'combined_labels': combined_labels,
                 }
+    
+    def calculate_most_used(self, start_date, end_date):
+        # Combine morning and afternoon data
+        mood_data = {}
+        for date in self._history:
+            if start_date <= date <= end_date:
+                mood_states = self._history[date]['morning']['mood_state'] + self._history[date].get('afternoon',
+                                                                                                     {}).get(
+                    'mood_state', [])
+                for mood_state in mood_states:
+                    mood_data[mood_state] = mood_data.get(mood_state, 0) + 1
+
+        # Get the most common mood states
+        top_mood_states = sorted(mood_data.items(), key=lambda x: x[1], reverse=True)
+
+        # Combine morning and afternoon data
+        tasks_data = {}
+        for date in self._history:
+            if start_date <= date <= end_date:
+                tasks = self._history[date]['morning']['tasks'] + self._history[date].get('afternoon', {}).get('tasks',
+                                                                                                               [])
+                for task in tasks:
+                    tasks_data[task] = tasks_data.get(task, 0) + 1
+
+        # Get the five most used tasks
+        top_tasks = sorted(tasks_data.items(), key=lambda x: x[1], reverse=True)
+
+        return top_mood_states, top_tasks
+
+    def calculate_metadata(self, start_date, end_date):
+        sep_data = self.calculate_separated_states(start_date, end_date)
+
+        day_count = len(sep_data.get('dates'))
+        good_mornings = 0
+        good_afternoons = 0
+        mid_mornings = 0
+        mid_afternoons = 0
+        bad_mornings = 0
+        bad_afternoons = 0
+        stress_days = 0
+        mental_fatigue_days = 0
+        sleepy_days = 0
+        no_motivation_days = 0
+
+        for idx, day in enumerate(sep_data.get('dates')):
+            # Morning mood states
+            morning_mood_states = [sep_data['morning_energy'][idx], sep_data['morning_stress'][idx],
+                                   sep_data['morning_fatigue'][idx], sep_data['morning_demotivation'][idx]]
+            morning_med_mood = sorted(morning_mood_states)[len(morning_mood_states) // 2]
+
+            if morning_med_mood < 3:
+                good_mornings += 1
+            elif morning_med_mood == 3:
+                if any(val >= 4 for val in morning_mood_states):
+                    bad_mornings += 1
+                else:
+                    mid_mornings += 1
+            else:
+                bad_mornings += 1
+
+            # Afternoon mood states
+            afternoon_mood_states = [sep_data['afternoon_energy'][idx], sep_data['afternoon_stress'][idx],
+                                     sep_data['afternoon_fatigue'][idx], sep_data['afternoon_demotivation'][idx]]
+            afternoon_med_mood = sorted(afternoon_mood_states)[len(afternoon_mood_states) // 2]
+
+            if afternoon_med_mood < 3:
+                good_afternoons += 1
+            elif afternoon_med_mood == 3:
+                if any(val >= 4 for val in afternoon_mood_states):
+                    bad_afternoons += 1
+                else:
+                    mid_afternoons += 1
+            else:
+                bad_afternoons += 1
+
+            # Update counters for stress, mental fatigue, sleepy, and no motivation days
+            if sep_data['morning_stress'][idx] > 3 or sep_data['afternoon_stress'][idx] > 3:
+                stress_days += 1
+            if sep_data['morning_fatigue'][idx] > 3 or sep_data['afternoon_fatigue'][idx] > 3:
+                mental_fatigue_days += 1
+            if sep_data['morning_energy'][idx] > 3 or sep_data['afternoon_energy'][idx] > 3:
+                sleepy_days += 1
+            if sep_data['morning_demotivation'][idx] > 3 or sep_data['afternoon_demotivation'][idx] > 3:
+                no_motivation_days += 1
+
+        return (day_count, good_mornings, good_afternoons, mid_mornings, mid_afternoons, bad_mornings,
+                bad_afternoons, stress_days, mental_fatigue_days, sleepy_days, no_motivation_days)
+
+
+class ChartGenerator:
+    def __init__(self, data_generator):
+        self.data_generator = data_generator
 
     def _prepare_line_chart(self, ax, energy, stress, fatigue, demotivation, labels, title, compact=False):
         median_energy = np.average([value for value in energy if value is not None])
@@ -117,7 +212,7 @@ class ChartGenerator:
         frame.set_linewidth(0)
 
     def generate_line_chart(self, title, start_date=None, end_date=None, compact=False):
-        combined_data = self._calculate_combined_states(start_date, end_date, compact=compact)
+        combined_data = self.data_generator.calculate_combined_states(start_date, end_date, compact=compact)
 
         # Plotting the combined data
         style.use('dark_background')  # Use a dark mode-like style
@@ -147,34 +242,6 @@ class ChartGenerator:
         line_chart_buffer.close()
         return result
 
-    def _calculate_most_used(self, start_date, end_date):
-        # Combine morning and afternoon data
-        mood_data = {}
-        for date in self._history:
-            if start_date <= date <= end_date:
-                mood_states = self._history[date]['morning']['mood_state'] + self._history[date].get('afternoon',
-                                                                                                     {}).get(
-                    'mood_state', [])
-                for mood_state in mood_states:
-                    mood_data[mood_state] = mood_data.get(mood_state, 0) + 1
-
-        # Get the most common mood states
-        top_mood_states = sorted(mood_data.items(), key=lambda x: x[1], reverse=True)
-
-        # Combine morning and afternoon data
-        tasks_data = {}
-        for date in self._history:
-            if start_date <= date <= end_date:
-                tasks = self._history[date]['morning']['tasks'] + self._history[date].get('afternoon', {}).get('tasks',
-                                                                                                               [])
-                for task in tasks:
-                    tasks_data[task] = tasks_data.get(task, 0) + 1
-
-        # Get the five most used tasks
-        top_tasks = sorted(tasks_data.items(), key=lambda x: x[1], reverse=True)
-
-        return top_mood_states, top_tasks
-
     def generate_bar_chart(self, top_data, title, color):
         data_labels, data_counts = zip(*top_data[:min(5, len(top_data))])
 
@@ -183,7 +250,7 @@ class ChartGenerator:
 
         # Create a vertical bar chart
         ax.bar(data_labels, data_counts, color=color, alpha=1)
-        ax.set_title(f'{self.NEWLINE}{title}{self.NEWLINE}', color='white', fontsize=32)
+        ax.set_title(f'{NEWLINE}{title}{NEWLINE}', color='white', fontsize=32)
         ax.set_facecolor('#404040')
         ax.spines['bottom'].set_color('#bfbfbf')
         ax.spines['top'].set_color('#bfbfbf')
@@ -202,7 +269,7 @@ class ChartGenerator:
         return result
 
     def generate_bar_charts(self, start_date=None, end_date=None):
-        top_mood_states, top_tasks = self._calculate_most_used(start_date, end_date)
+        top_mood_states, top_tasks = self.data_generator.calculate_most_used(start_date, end_date)
         tasks_chart = self.generate_bar_chart(top_tasks, 'Häufigste Aufgaben', 'skyblue')
         mood_chart = self.generate_bar_chart(top_mood_states, 'Häufigste Stimmungen', 'palegreen')
         return tasks_chart, mood_chart

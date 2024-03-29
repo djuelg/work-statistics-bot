@@ -1,13 +1,14 @@
-from conversation.content.generic_messages import GoodbyeMessage, MorningMessage, YawningCatSticker, \
-    ProblematicDataMessage, ReflectionMessage, HelloAgainMessage
+from conversation.content.generic_messages import GoodbyeMessage, YawningCatSticker, \
+    ProblematicDataMessage, HelloAgainMessage, CumulatedStatisticsMessage, \
+    FrequentDimensionsMessage
 from conversation.message_types import Message, ImageGroupMessage
 
 
-def create_monthly_conversation(images):
+def create_monthly_conversation(stats, images):
     messages = [HelloAgainMessage(), ]
     if images:
-        messages.extend([MonthlyIntroductionMessage(), ImageGroupMessage(images), ReflectionMessage(),
-                         MonthlyGoodbyeMessage(), YawningCatSticker()])
+        messages.extend([MonthlyIntroductionMessage(), CumulatedStatisticsMessage(stats), ImageGroupMessage(images),
+                         FrequentDimensionsMessage(stats), MonthlyGoodbyeMessage(), YawningCatSticker()])
     else:
         messages.extend([ProblematicDataMessage(), GoodbyeMessage(), YawningCatSticker()])
     return messages
@@ -24,7 +25,7 @@ class MonthlyIntroductionMessage(Message):
 
 class MonthlyGoodbyeMessage(Message):
     PROMPTS = [
-        "Okay, ich hoffe die Grafiken waren hilfreich. Hab einen schönen Abend!",
+        "Okay, das wars mit der monatlichen Zusammenfassung. Hab einen schönen Abend!",
     ]
 
     def __init__(self):

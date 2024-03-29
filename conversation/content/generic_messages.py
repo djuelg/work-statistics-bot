@@ -67,6 +67,55 @@ class ExpertSpecificationQuestion(SingleAnswerMessage):
         super().__init__(self.PROMPTS, self.SPECIFY_CALLBACK_KEY, callback, formatted_answers)
 
 
+class CumulatedStatisticsMessage(Message):
+    def __init__(self, stats):
+        day_count, good_mornings, good_afternoons, mid_mornings, mid_afternoons, bad_mornings, bad_afternoons, \
+            stress_days, mental_fatigue_days, sleepy_days, no_motivation_days = stats
+
+        result = (f"*Du hast an {day_count} Tagen Angaben gemacht*\n"
+                  f"Davon waren {good_mornings} Morgen und {good_afternoons} Nachmittage im guten Bereich. An {mid_mornings} Morgen und {mid_afternoons} Nachmittagen waren deine Angaben im mittleren Bereich.\n"
+                  f"Eher schwierig fielen dir {bad_mornings} Morgen und {bad_afternoons} Nachmittage. Davon {stress_days} wegen Stress, {mental_fatigue_days} wegen mentaler Ermüdung, {sleepy_days} wegen Schläfrigkeit und {no_motivation_days} wegen Motivationslosigkeit.")
+
+        super().__init__(result)
+
+
+class FrequentDimensionsMessage(Message):
+    def __init__(self, stats):
+        day_count, good_mornings, good_afternoons, mid_mornings, mid_afternoons, bad_mornings, bad_afternoons, \
+            stress_days, mental_fatigue_days, sleepy_days, no_motivation_days = stats
+
+        dimension_days = {
+            'Stress': stress_days,
+            'mentale Ermüdung': mental_fatigue_days,
+            'Schläfrigkeit': sleepy_days,
+            'Motivationslosigkeit': no_motivation_days
+        }
+
+        highly_frequent_dimensions = []
+        for dimension, days in dimension_days.items():
+            if days / day_count > 0.6:
+                highly_frequent_dimensions.append(dimension)
+
+        if day_count <= 3:
+            result = "Wegen der geringen Anzahl an Tagen, an denen du Angaben gemacht hast, kann ich leider keine aussagekräftigen Hinweise geben."
+        elif highly_frequent_dimensions:
+            high_dimensions_text = ", ".join(highly_frequent_dimensions)
+            high_dimensions_text = ' und '.join(high_dimensions_text.rsplit(', ', 1))
+            result = f"Es scheint, als hättest du in den letzten Tagen besonders häufig mit {high_dimensions_text} zu kämpfen. Sollten Dimensionen konstant im höheren Bereich liegen, nimm dir am Besten Zeit darüber nachzudenken, woran das liegen könnte und was du tun kannst, um deine Umstände zu verbessern."
+        else:
+            frequent_dimensions = [dimension for dimension, days in dimension_days.items()
+                                    if (days / day_count) > 0.35]
+
+            if frequent_dimensions:
+                high_dimensions_text = ", ".join(frequent_dimensions)
+                high_dimensions_text = ' und '.join(high_dimensions_text.rsplit(', ', 1))
+                result = f"Schön! Es sieht so aus, als hättest du in den letzten Tagen recht ausgeglichen gelebt. Es fällt jedoch auf, dass {high_dimensions_text} etwas ist womit du öfter zu tun hattest. In einem gewissen Rahmen ist das normal, aber es könnte trotzdem hilfreich sein, darüber nachzudenken, wie du damit umgehen möchtest."
+            else:
+                result = "Schön! Es sieht so aus, als hättest du im Großen und Ganzen in den letzten Tagen recht ausgeglichen gelebt."
+
+        super().__init__(result)
+
+
 class HelloMessage(Message):
     PROMPTS = [
         "Hey{}! Ich bins wieder.",

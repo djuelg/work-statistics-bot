@@ -18,7 +18,7 @@ from conversation.engine import ConversationEngine, HISTORY_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, StickerMessage, ImageMessage, \
     ImageGroupMessage
 from freeform_chat.freeform_client import FreeformClient
-from statistics.chart_generator import ChartGenerator
+from statistics.chart_generator import ChartGenerator, CumulatedDataGenerator
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
@@ -195,11 +195,17 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
         cengine.copy_today_to_history()
         conversation = []
     elif context.job.name == WEEKLY_JOB.format(context.job.chat_id):
-        charts = await create_weekly_charts(cengine)
-        conversation = create_weekly_conversation(charts)
+        history = cengine.get_state(HISTORY_KEY)
+        data_generator = CumulatedDataGenerator(history)
+        stats = await create_weekly_statistics(data_generator)
+        charts = await create_weekly_charts(data_generator)
+        conversation = create_weekly_conversation(stats, charts)
     elif context.job.name == MONTHLY_JOB.format(context.job.chat_id):
-        charts = await create_monthly_charts(cengine)
-        conversation = create_monthly_conversation(charts)
+        history = cengine.get_state(HISTORY_KEY)
+        data_generator = CumulatedDataGenerator(history)
+        stats = await create_monthly_statistics(data_generator)
+        charts = await create_monthly_charts(data_generator)
+        conversation = create_monthly_conversation(stats, charts)
     else:
         return
 
@@ -208,10 +214,9 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     await send_next_messages(bot, cengine, context.job.chat_id)
 
 
-async def create_weekly_charts(cengine):
-    history = cengine.get_state(HISTORY_KEY)
+async def create_weekly_charts(data_generator):
     try:
-        chart_generator = ChartGenerator(history)
+        chart_generator = ChartGenerator(data_generator)
         start_date = str((datetime.now() - timedelta(days=7)).date())
         end_date = str(datetime.now().date())
         cal_week = (datetime.now() - timedelta(days=7)).isocalendar()[1]
@@ -224,10 +229,19 @@ async def create_weekly_charts(cengine):
         return None
 
 
-async def create_monthly_charts(cengine):
-    history = cengine.get_state(HISTORY_KEY)
+async def create_weekly_statistics(data_generator: CumulatedDataGenerator):
     try:
-        chart_generator = ChartGenerator(history)
+        start_date = str((datetime.now() - timedelta(days=7)).date())
+        end_date = str(datetime.now().date())
+        return data_generator.calculate_metadata(start_date, end_date)
+    except Exception as e:
+        print(e)
+        return None
+
+
+async def create_monthly_charts(data_generator: CumulatedDataGenerator):
+    try:
+        chart_generator = ChartGenerator(data_generator)
         current_date = datetime.now()
         _, num_days = calendar.monthrange(current_date.year, current_date.month)
         start_date = str(datetime(current_date.year, current_date.month, 1).date())
@@ -238,6 +252,18 @@ async def create_monthly_charts(cengine):
             start_date=start_date, end_date=end_date, compact=True)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
         return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
+    except Exception as e:
+        print(e)
+        return None
+
+
+async def create_monthly_statistics(data_generator: CumulatedDataGenerator):
+    try:
+        current_date = datetime.now()
+        _, num_days = calendar.monthrange(current_date.year, current_date.month)
+        start_date = str(datetime(current_date.year, current_date.month, 1).date())
+        end_date = str(datetime(current_date.year, current_date.month, num_days).date())
+        return data_generator.calculate_metadata(start_date, end_date)
     except Exception as e:
         print(e)
         return None
