@@ -38,9 +38,13 @@ def extend_predefined_with_recent_items(question_key, cengine, predefined_answer
     recent_items = cengine.get_state(recent_key) or []
     flattened_answers = [item for sublist in predefined_answers for item in sublist]
     recent_items = [item for item in recent_items if item not in flattened_answers]
-    recent_three = recent_items[:min(3, len(recent_items))]
-    if recent_three:
-        predefined_answers.insert(0, recent_three)
+    recent_six = recent_items[:min(6, len(recent_items))]
+    recent_six.reverse()
+
+    if recent_six:
+        predefined_answers.insert(0, recent_six[:3])
+        if len(recent_six) > 3:
+            predefined_answers.insert(0, recent_six[3:])
     return predefined_answers
 
 
@@ -100,7 +104,7 @@ class ConversationEngine:
             self.update_state(date_key, today_data)
         self.drop_state(DAILY_QUESTIONNAIRE_KEY)
 
-    def update_recently_used_values(self, key, value, recent_size=10):
+    def update_recently_used_values(self, key, value, recent_size=20):
         recent_key = f'{KEY_GROUPING_RECENTLY}.{key.split(".")[-1]}'
         recent_items = self.get_state(recent_key) or []
         recent_items.insert(0, value)
