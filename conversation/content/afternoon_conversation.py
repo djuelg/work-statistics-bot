@@ -11,13 +11,19 @@ from conversation.engine import update_state_single_answer_callback, DAILY_QUEST
 from conversation.message_types import Message, SingleAnswerMessage, FreeformMessage
 
 
-FREEFORM_CLIENT_DESCRIPTION_ONESHOT = "Du bist ein Assistent, der mit dem User erfasst, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. " \
-                      "Manchmal funktioniert für den User nicht alles wie gewünscht und das ist okay. " \
-                      "Drücke dich kurz, präzise aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. " \
-                      "Antworte in Form von zwei bis drei kurzen Aussagesätzen. Erwarte keine weitere Antwort. " \
-                      "Es ist dem Assistent verboten Sätze in Frageform zu formulieren und es ist verboten das Zeichen ? zu nutzen." \
-                      "Verwende weniger als 100 completion_tokens."
 
+FREEFORM_CLIENT_DESCRIPTIONS_ONESHOT = ["Du bist ein empathischer Assistent, der wie ein guter Freund, mit dem User bespricht, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. ",
+                               "Bedenke beim Formulieren einer Antwort folgende Schritte: \n"
+                               "1. Großes Ganzes betrachten: In welcher Situation befindet sich der User\n"
+                               "2. Analyse: Welche Probleme sind in dieser Situation entstanden\n"
+                               "3. Einordnung: Wie verbreitet ist diese Art von Problem\n"
+                               "4. Recherche: Was haben seriöse wissenschaftliche Quellen (z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie) dazu herausgefunden\n"
+                               "5. Lösung: Wie kann produktiv damit umgegangen werden\n",
+                               "Manchmal funktioniert für den User nicht alles wie gewünscht und das ist okay. ",
+                               "Drücke dich kurz und präzise aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. "
+                               "Antworte in Form von zwei bis drei kurzen Aussagesätzen. Erwarte keine weitere Antwort. "
+                               "Es ist dem Assistent verboten Sätze in Frageform zu formulieren und es ist verboten das Zeichen ? zu nutzen. "
+                               "Verwende weniger als 100 completion_tokens."]
 
 def create_afternoon_conversation():
     return [
@@ -90,8 +96,8 @@ def respond_to_positive_progress_callback(key, value, cengine=None, is_multi_ans
     update_state_single_answer_callback(key, value, cengine, is_multi_answer_finished=is_multi_answer_finished)
     morning_results = cengine.get_state(f"{DAILY_QUESTIONNAIRE_KEY}.{KEY_GROUPING_MORNING}")
     morning_summary = create_questionnaire_summary(morning_results)
-    context_description = f"{FREEFORM_CLIENT_DESCRIPTION_ONESHOT} Die User Angaben diesen Morgen waren im {morning_summary}. " \
-                          f"Gehe auf dieses Ergebnis, sowie die Aussagen des Users zu den morgendlichen Aufgaben ein."
+    context_descriptions = [*FREEFORM_CLIENT_DESCRIPTIONS_ONESHOT, f"Die User Angaben diesen Morgen waren im {morning_summary}. "
+                            f"Gehe auf dieses Ergebnis, sowie die Aussagen des Users zu den morgendlichen Aufgaben ein."]
 
     if value == "Ja":
         return [Message(text=["Okay, schön zu hören. ", "Das freut mich zu hören!"])]
@@ -99,7 +105,7 @@ def respond_to_positive_progress_callback(key, value, cengine=None, is_multi_ans
         return [FreeformMessage(text=["Tut mir leid zu können. Was war das Problen?",
                                      "Oh, das tut mir leid. Wo lag das Problen?"],
                                has_freeform_chaining=False,
-                               context_description=context_description)]
+                               context_descriptions=context_descriptions)]
 
 
 # TODO: Remove as soon as ptb user_data does not rely on cengine anymore (after migration)

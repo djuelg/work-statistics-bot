@@ -33,34 +33,39 @@ class Message:
         return self._content.text
 
 
-class NoOpMessage(Message):
+class WordlessMessage(Message):
+    def __init__(self):
+        super(WordlessMessage, self).__init__("")
+
+
+class NoOpMessage(WordlessMessage):
     def __init__(self):
         self._sent = True
-        super(NoOpMessage, self).__init__("")
+        super(NoOpMessage, self).__init__()
 
 
-class StickerMessage(Message):
+class StickerMessage(WordlessMessage):
     def __init__(self, sticker_id):
         self.sticker_id = sticker_id
-        super(StickerMessage, self).__init__("")
+        super(StickerMessage, self).__init__()
 
 
-class ImageMessage(Message):
+class ImageMessage(WordlessMessage):
     def __init__(self, image):
         self.image = image
-        super(ImageMessage, self).__init__("")
+        super(ImageMessage, self).__init__()
 
 
-class ImageGroupMessage(Message):
+class ImageGroupMessage(WordlessMessage):
     def __init__(self, media_group):
         self.media_group = media_group
-        super(ImageGroupMessage, self).__init__("")
+        super(ImageGroupMessage, self).__init__()
 
 
 class FreeformMessage(Message):
-    def __init__(self, text, has_freeform_chaining=True, context_description=""):
+    def __init__(self, text, has_freeform_chaining=True, context_descriptions=""):
         self.has_freeform_chaining = has_freeform_chaining
-        self.context_description = context_description
+        self.context_descriptions = context_descriptions
         super(FreeformMessage, self).__init__(text)
 
 

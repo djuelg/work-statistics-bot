@@ -3,7 +3,8 @@ import random
 from collections import deque
 from datetime import datetime
 
-from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message, NoOpMessage
+from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message, NoOpMessage, \
+    WordlessMessage
 
 KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
@@ -52,7 +53,7 @@ class FreeformClientBase:
     ROLE_ASSISTANT = 'assistant'
     ROLE_USER = 'user'
 
-    def generate_responses(self, messages, context_description=""):
+    def generate_responses(self, messages, context_descriptions="", is_oneshot=False):
         pass
 
 
@@ -70,8 +71,7 @@ class ConversationEngine:
 
     def next_message(self):
         self.current_message = self.queue.popleft()
-        if str(self.current_message):
-            self._save_conversation_messages(FreeformClientBase.ROLE_ASSISTANT, str(self.current_message))
+        self._save_conversation_messages(FreeformClientBase.ROLE_ASSISTANT, self.current_message)
         return self.current_message
 
     def is_waiting_for_user_input(self):
@@ -81,10 +81,10 @@ class ConversationEngine:
         )
 
     def handle_user_input(self, text):
-        self._save_conversation_messages(FreeformClientBase.ROLE_USER, text)
+        self._save_conversation_messages(FreeformClientBase.ROLE_USER, Message(text=text))
         if isinstance(self.current_message, FreeformMessage):
             last_messages = self.get_state(CONVERSATION_MESSAGES_KEY)
-            answers = self.freeform_client.generate_responses(last_messages, context_description=self.current_message.context_description)
+            answers = self.freeform_client.generate_responses(last_messages, context_descriptions=self.current_message.context_descriptions, is_oneshot=(not self.current_message.has_freeform_chaining))
             if self.current_message.has_freeform_chaining:
                 answers = [FreeformMessage(text=ans) for ans in answers]
             else:
@@ -112,7 +112,19 @@ class ConversationEngine:
         self.update_state(recent_key, recent_items)
 
     def _save_conversation_messages(self, role, current_message):
-        self.append_state(CONVERSATION_MESSAGES_KEY, (role, current_message))
+        from conversation.content.questionaire_conversation import MotivationQuestion, MentalFatigueQuestion, \
+            StressQuestion, EnergyQuestion
+        if not str(current_message) or str(current_message) == 'Fertig':
+            return
+        if len(str(current_message)) == 1 and str(current_message).isnumeric():
+            return
+        if isinstance(current_message, WordlessMessage) or \
+                isinstance(current_message, MotivationQuestion) or \
+                isinstance(current_message, EnergyQuestion) or \
+                isinstance(current_message, StressQuestion) or \
+                isinstance(current_message, MentalFatigueQuestion):
+            return
+        self.append_state(CONVERSATION_MESSAGES_KEY, (role, str(current_message)))
 
     def get_state(self, key):
         nested_keys = key.split('.')
