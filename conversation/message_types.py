@@ -69,6 +69,25 @@ class FreeformMessage(Message):
         super(FreeformMessage, self).__init__(text)
 
 
+class GeneratedMessage(Message):
+    def __init__(self, context_descriptions, conversation_messages_key):
+        self.context_descriptions = context_descriptions
+        self.conversation_messages_key = conversation_messages_key
+        super().__init__("")
+
+    def content(self, cengine=None):
+        last_messages = cengine.get_state(self.conversation_messages_key)
+        answers = cengine.freeform_client.generate_responses(
+            last_messages,
+            context_descriptions=self.context_descriptions,
+            is_oneshot=True,
+            max_tokens=800
+        )
+        answers = [answer for sublist in answers for answer in sublist.split("\n\n")]
+        self._content.text = "\n\n".join(answers)
+        return self._content
+
+
 class AnswerableMessage(Message):
 
     def __init__(self, text, callback_key, callback, predefined_answers=None):

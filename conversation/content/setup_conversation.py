@@ -12,8 +12,12 @@ def create_setup_conversation(first_met=True):
         NameQuestion(),
         NameAnswerMessage(),
         WorkBeginQuestion(),
-        MultiAnswerExampleMessage(),
-        MultiAnswerExampleReaction(),
+        MultiAnswerIntroductionMessage(),
+        EnergyRemediesQuestion(),
+        EnergyRemediesReaction(),
+        StressRemediesQuestion(),
+        MentalFatigueRemediesQuestion(),
+        MotivationRemediesQuestion(),
         SetupWrapupMessage(),
         ThumbsUpCatSticker(),
     ]
@@ -86,41 +90,101 @@ class WorkBeginQuestion(SingleAnswerMessage):
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, update_state_single_answer_callback, self.STATES)
 
 
-class MultiAnswerExampleMessage(MultiAnswerMessage):
-    LOOKING_FORWARD_KEY = "current_conversation.looking_forward_to"
-
+class MultiAnswerIntroductionMessage(Message):
     PROMPTS = [
         "Manchmal stelle ich Fragen bei denen du zum einen _mehrere_ und zum Anderen _eigene_ Antworten geben kannst. "
         "Eigene Antworten kannst du einfach per Chat senden. Wenn du alle gewünschten Antworten gewählt hast, "
-        "klicke auf Fertig damit es weiter geht. Als Beispiel: Worauf freust du dich heute noch?",
-    ]
-    STATES = [
-        ["Mittagessen", "Ein Treffen", "Das Abendprogramm"],
-        ["Fertig"]
+        "klicke auf Fertig damit es weiter geht. Folgendes würde ich gerne wissen:",
     ]
 
     def __init__(self):
-        super().__init__(self.PROMPTS, self.LOOKING_FORWARD_KEY, update_state_multi_answer_callback, copy.deepcopy(self.STATES))
+        super().__init__(self.PROMPTS)
 
 
-class MultiAnswerExampleReaction(Message):
-    CALLBACK_KEY = "current_conversation.looking_forward_to"
+class EnergyRemediesQuestion(MultiAnswerMessage):
+    CALLBACK_KEY = 'remedies.energy_remedies'
+    PROMPTS = ["Wenn du an einem Tag überdurchschnittlich müde bist, was würde dir helfen produktiv damit umzugehen? Überlege erst selbst bevor du die Beispiele nutzt."]
+    STATES = [
+        ["Meditation", "Spazieren gehen", "Sport treiben"],
+        ["Musik hören", "Zeit in der Natur", "Yoga"],
+        ["Tiefes Atmen", "Kurzer Schlaf", "Etwas essen"],
+        ["Lesen", "Kunst", "Mit jemandem sprechen"],
+        ["Pomodoros", "Stehend arbeiten", "Kalt duschen"],
+        ["Fertig"]
+    ]
+
+    def __init__(self, callback=update_state_multi_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, copy.deepcopy(self.STATES))
+
+
+class EnergyRemediesReaction(Message):
+    CALLBACK_KEY = 'remedies.energy_remedies'
 
     def __init__(self):
         super().__init__("")
 
     def content(self, cengine=None):
-        looking_forward_items = cengine.get_state(self.CALLBACK_KEY)
-        looking_forward_items = list(dict.fromkeys(looking_forward_items).keys()) or ["Anscheinend nichts"]
-        self._content.text = f"Du freust dich auf: {', '.join(looking_forward_items)}"
+        energy_remedies_items = cengine.get_state(self.CALLBACK_KEY)
+        energy_remedies_items = list(dict.fromkeys(energy_remedies_items).keys()) or ["Keine"]
+        self._content.text = f"Du hast angegeben, dass dir folgende Dinge helfen, wenn du an einem Tag überdurchschnittlich müde bist: _{', '.join(energy_remedies_items)}_. " \
+                             f"Diese Informationen helfen mir dir in Zukunft gezielte Vorschläge machen zu können. Wir sind gleich fertig, aber drei Fragen habe ich noch:"
         return self._content
+
+
+class StressRemediesQuestion(MultiAnswerMessage):
+    CALLBACK_KEY = 'remedies.stress_remedies'
+    PROMPTS = ["Wenn du an einem Tag besonders gestresst bist, was würde dir helfen produktiv damit umzugehen? Überlege erst selbst bevor du die Beispiele nutzt."]
+    STATES = [
+        ["Meditation", "Spazieren gehen", "Sport treiben"],
+        ["Musik hören", "Zeit in der Natur", "Yoga"],
+        ["Tiefes Atmen", "Kurzer Schlaf", "Etwas essen"],
+        ["Lesen", "Kunst", "Mit jemandem sprechen"],
+        ["Pomodoros", "Stehend arbeiten", "Kalt duschen"],
+        ["Fertig"]
+    ]
+
+    def __init__(self, callback=update_state_multi_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, copy.deepcopy(self.STATES))
+
+
+class MentalFatigueRemediesQuestion(MultiAnswerMessage):
+    CALLBACK_KEY = 'remedies.mental_fatigue_remedies'
+    PROMPTS = ["Wenn du an einem Tag schnell mental ermüdest, was würde dir helfen produktiv damit umzugehen? Überlege erst selbst bevor du die Beispiele nutzt."]
+    STATES = [
+        ["Meditation", "Spazieren gehen", "Sport treiben"],
+        ["Musik hören", "Zeit in der Natur", "Yoga"],
+        ["Tiefes Atmen", "Kurzer Schlaf", "Etwas essen"],
+        ["Lesen", "Kunst", "Mit jemandem sprechen"],
+        ["Pomodoros", "Stehend arbeiten", "Kalt duschen"],
+        ["Fertig"]
+    ]
+
+    def __init__(self, callback=update_state_multi_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, copy.deepcopy(self.STATES))
+
+
+class MotivationRemediesQuestion(MultiAnswerMessage):
+    CALLBACK_KEY = 'remedies.motivation_remedies'
+    PROMPTS = ["Wenn du an einem Tag sehr motivationslos bist, was würde dir helfen produktiv damit umzugehen? Überlege erst selbst bevor du die Beispiele nutzt."]
+    STATES = [
+        ["Meditation", "Spazieren gehen", "Sport treiben"],
+        ["Musik hören", "Zeit in der Natur", "Yoga"],
+        ["Tiefes Atmen", "Kurzer Schlaf", "Etwas essen"],
+        ["Lesen", "Kunst", "Mit jemandem sprechen"],
+        ["Pomodoros", "Stehend arbeiten", "Kalt duschen"],
+        ["Fertig"]
+    ]
+
+    def __init__(self, callback=update_state_multi_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, copy.deepcopy(self.STATES))
 
 
 class SetupWrapupMessage(Message):
     PROMPTS = [
-        "Gut danke, du weißt jetzt alles wichtige. Ich melde mich später wieder.",
-        "Okay, dann weißt du nun alles wichtige und hörst später wieder von mir.",
+        "Gut danke, ich weißt jetzt alles wichtige. Ich melde mich später wieder bei dir.",
+        "Okay, dann weiß ich nun alles wichtige und du hörst später wieder von mir.",
     ]
 
     def __init__(self):
         super().__init__(self.PROMPTS)
+

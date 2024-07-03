@@ -1,8 +1,16 @@
 import random
 
 from conversation.content.generic_messages import WhatElseMessage, MEDITATION_LINK, remedy_callback, \
-    GenericRemedyMessage, ExpertSpecificationQuestion
-from conversation.message_types import Message, FreeformMessage
+    GenericRemedyMessage, FREEFORM_CLIENT_DESCRIPTIONS_REMEDY
+from conversation.engine import update_state_single_answer_callback, CONVERSATION_MESSAGES_KEY
+from conversation.message_types import Message, FreeformMessage, SingleAnswerMessage, GeneratedMessage
+
+STATE_NAMES = {
+    "stress_state": "Stress",
+    "mental_fatigue_state": "Mentale Ermüdung",
+    "energy_state": "Schläfrigkeit",
+    "motivation_state": "Unlust",
+}
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
 KEY_GROUPING_AFTERNOON = 'afternoon'
@@ -10,17 +18,6 @@ KEY_GROUPING_MORNING = 'morning'
 
 BAD_MOOD_CONSTANT = 3.5
 GOOD_MOOD_CONSTANT = 2
-
-FREEFORM_CLIENT_DESCRIPTION = ["Du bist ein empathischer Assistent, der wie ein guter Freund, mit dem User bespricht, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. ",
-                               "Bedenke beim Formulieren einer Antwort folgende Schritte: \n"
-                               "1. Großes Ganzes betrachten: In welcher Situation befindet sich der User\n"
-                               "2. Analyse: Welche Probleme sind in dieser Situation entstanden\n"
-                               "3. Einordnung: Wie verbreitet ist diese Art von Problem\n"
-                               "4. Recherche: Was haben seriöse wissenschaftliche Quellen (z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie) dazu herausgefunden\n"
-                               "5. Lösung: Wie kann produktiv damit umgegangen werden\n",
-                               "Besser als konkrete Empfehlungen sind in manchen Situationen Rückfragen, die zur Selbstreflexion anregen. "
-                               "Drücke dich kurz und präzise aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. "
-                               "Verwende weniger als 100 completion_tokens."]
 
 
 class GenericExpert:
@@ -152,6 +149,151 @@ class DemotivationExpert(GenericExpert):
         return messages
 
 
+class StartProblemEvaluationQuestion(SingleAnswerMessage):
+    PROBLEM_EVALUATION_KEY = 'daily_questionnaire.remedy.start_problem_evaluation'
+    PROMPTS = ["Meist lohnt es sich kurz darüber nachzudenken, wie man mit der jetzigen Situation produktiv umgehen kann. "
+               "Möchtest du eine geführte Reflektion über {} machen?"]
+    ANSWER_YES = f'ANSWER_YES'
+    ANSWER_NO_TIME = f'ANSWER_NO_TIME'
+    ANSWER_NO_MOTIVATION = f'ANSWER_NO_MOTIVATION'
+    STATES = [
+        [("Ja, lass uns kurz darüber reden", ANSWER_YES)],
+        [("Nein, es geht zeitlich gerade schlecht", ANSWER_NO_TIME)],
+        [("Nein, keine Lust", ANSWER_NO_MOTIVATION)]
+    ]
+
+    def __init__(self, problem_keys, callback=None):
+        self.problem_keys = problem_keys
+
+        callback = callback if callback else self._problem_evaluation_callback
+        super().__init__(self.PROMPTS, self.PROBLEM_EVALUATION_KEY, callback, self.STATES)
+
+    def content(self, cengine=None):
+        problem_names = [STATE_NAMES[key] for key in self.problem_keys]
+        if len(problem_names) == 1:
+            self._content.text = self.PROMPTS[0].format(problem_names[0])
+        else:
+            self._content.text = self.PROMPTS[0].format(
+                ", ".join(problem_names[:-1]) + " und " + problem_names[-1])
+
+        return self._content
+
+    def _problem_evaluation_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        update_state_single_answer_callback(key, value, cengine, is_multi_answer_finished)
+        ONE_SENTENCE_REMEDIES = {
+            "Stress": "Kümmere dich wenn du gestresst bist nur um die wirklich wichtigen Dinge und versuche es zu akzeptieren, falls du nicht alles schaffst.",
+            "Mentale Ermüdung": "Mentale Ermüdung baut sich durch anhaltende geistige Anstrengungen über den Tag auf und wird nur durch Entspannung abgebaut.",
+            "Schläfrigkeit": "Sich im Laufe des Tages müde oder energielos zu fühlen kann vorkommen, geht aber meist mit der Zeit vorüber.",
+            "Unlust": "Für manche Aufgaben keine intrinsische Motivation zu haben ist normal. Versuche das zu akzeptieren und belohne dich für das Erledigte anderweitig."
+        }
+        if value == StartProblemEvaluationQuestion.ANSWER_YES:
+            responses = [
+                ProblemExplanationQuestion(),
+                ProblemOriginQuestion(),
+                ProblemLongevityQuestion(),
+                ShortTermReliefQuestion(self.problem_keys),
+                WhatElseMessage(text="Hast du noch Fragen?")
+            ]
+            responses.reverse()
+            return responses
+        else:
+            responses = [Message(text="Okay kein Problem, versuch aber dich nicht zu überfordern und nicht zu lange zu machen. Bedenke folgendes:")]
+            for idx, key in enumerate(self.problem_keys):
+                responses.append(Message(text=f"{idx + 1}. {ONE_SENTENCE_REMEDIES[STATE_NAMES[key]]}"))
+            responses.append(Message(text=f"{len(self.problem_keys)+1}. Wenn du nicht so leistungsfähig bist ist das in Ordnung. Dein Körper versucht dir zu vermitteln, Erholungspausen einzulegen und wenn möglich eher leichte Aufgaben durchzuführen. Tu ihm den Gefallen :)"))
+            responses.reverse()
+            return responses
+
+
+class ProblemExplanationQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.problem_explanation'
+    PROMPTS = ["Okay, dann beschreibe zunächst was du gerade für ein Problem hast:"]
+
+    def __init__(self, callback=update_state_single_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+
+class ProblemOriginQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.problem_origin'
+    PROMPTS = ["Nun ist die Frage warum du dieses Problem haben könntest? Welche Ursachen spielen eine Rolle?"]
+
+    def __init__(self, callback=update_state_single_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+
+class ProblemLongevityQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.problem_longevity'
+    PROMPTS = [
+        "Wie präsent ist das Problem in deinem Leben? Hattest du es schon öfter in der Vergangenheit? Ist es längerfristiger Natur?"]
+    STATES = [["Es ist ein Einzelfall"], ["Es ist vereinzelt schon aufgetreten"], ["Es ist ein längerfristiges Problem"]]
+
+    def __init__(self, callback=None):
+        callback = callback if callback else self._problem_evaluation_callback
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, self.STATES)
+
+    def _problem_evaluation_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        update_state_single_answer_callback(key, value, cengine, is_multi_answer_finished)
+        if value != "Es ist ein Einzelfall":
+            return [ProblemOccurrenceQuestion()]
+
+
+class ProblemOccurrenceQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.problem_occurrence'
+    PROMPTS = ["Welche Zeiten oder Situationen fallen dir ein, in denen das Problem schon mal aufgetreten ist?"]
+
+    def __init__(self, callback=update_state_single_answer_callback):
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+
+class ShortTermReliefQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = 'daily_questionnaire.remedy.selected_relief'
+    PROMPTS = ["Gibt es unter den folgenden Dingen etwas, dass du _jetzt_ umsetzen kannst um Abhilfe zu schaffen?"]
+    REMEDY_KEY_MAPPING = {
+        "stress_state": "remedies.stress_remedies",
+        "mental_fatigue_state": "remedies.mental_fatigue_remedies",
+        "energy_state": "remedies.energy_remedies",
+        "motivation_state": "remedies.motivation_remedies"
+    }
+
+    def __init__(self, problem_keys, callback=None):
+        self.problem_keys = problem_keys
+
+        callback = callback if callback else self._generated_remedy_response_callback
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+
+    def _generated_remedy_response_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        responses = [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_MESSAGES_KEY)]
+        if value == "Ich möchte nichts davon tun":
+            responses.append(Message(text="Okay, das ist in Ordnung. Lass uns deine Angaben zusammenfassen:"))
+        else:
+            responses.append(Message(text="Okay, lass uns zusammenfassen:"))
+        return responses
+
+    def content(self, cengine=None):
+        problem_relief_options = []
+        for key in self.problem_keys:
+            current_options = cengine.get_state(self.REMEDY_KEY_MAPPING[key])
+            problem_relief_options.extend(
+                [option for option in current_options if option not in problem_relief_options])
+
+        if not problem_relief_options:
+            self._content.predefined_answers = [
+                ["Meditation", "Spazieren gehen", "Sport treiben"],
+                ["Musik hören", "Zeit in der Natur", "Yoga"],
+                ["Tiefes Atmen", "Kurzer Schlaf", "Etwas essen"],
+                ["Lesen", "Kunst", "Mit jemandem sprechen"],
+                ["Pomodoros", "Stehend arbeiten", "Kalt duschen"],
+                ["Ich möchte nichts davon tun"]
+            ]
+            text_choice = self.PROMPTS if not isinstance(self.PROMPTS, list) else random.choice(self.PROMPTS)
+            self._content.text = f"{text_choice} (Mit dem Befehl /override\_setup kannst du diese Liste anpassen)"
+        else:
+            problem_relief_options = [problem_relief_options[i:i + 3] for i in range(0, len(problem_relief_options), 3)]
+            self._content.predefined_answers = [*problem_relief_options, ["Ich möchte nichts davon tun"]]
+        return self._content
+
+
 class QuestionnaireEvaluationExpert(GenericExpert):
     THANKS = "Gut, danke"
     HAPPY_RESPONSE = f"Es freut mich, dass es dir relativ gut zu gehen scheint! Dann will ich gar nicht weiter stören."
@@ -165,12 +307,6 @@ class QuestionnaireEvaluationExpert(GenericExpert):
     REMEDY_TALK = f"Wenn du deine Situation ausführlicher besprechen möchtest, schreib mir einfach. Ansonsten ist das erstmal alles. Du schaffst das schon😌"
     REMEDY_GENERIC = "Okay, hier noch ein paar Ideen, wofür du die Pausen nutzen könntest: "
 
-    STATE_NAMES = {
-        "stress_state": "Stress",
-        "mental_fatigue_state": "Mentale Ermüdung",
-        "energy_state": "Schläfrigkeit",
-        "motivation_state": "Unlust",
-    }
     STATE_EXPERTS = {
         "stress_state": StressExpert,
         "mental_fatigue_state": MentalFatigueExpert,
@@ -191,7 +327,7 @@ class QuestionnaireEvaluationExpert(GenericExpert):
     def short_evaluation(self, mood_states):
         answer = f"*Zusammengefasst waren deine Angaben:* \n"
         for key, value in mood_states.items():
-            answer += f"{self.STATE_NAMES[key]}: *{int(value)}*/5 \n"
+            answer += f"{STATE_NAMES[key]}: *{int(value)}*/5 \n"
         return answer
 
     def specify_expert_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
@@ -218,11 +354,7 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
                 responses.append(Message(text=self.BAD_RESPONSE.format(avg_mood)))
                 responses.append(Message(text=self.REMEDY_LOW_EXPECTATIONS))
-                answers = [(self.STATE_NAMES[key], key) for key in most_severe_states]
-                responses.append(ExpertSpecificationQuestion(callback=self.specify_expert_callback, answers=answers))
-            else:
-                expert = self.STATE_EXPERTS[next(iter(most_severe_states))](self._cengine, self._key_base)
-                responses.extend(expert.run())
+            responses.append(StartProblemEvaluationQuestion(most_severe_states.keys()))
 
         # TODO: Veränderungen zu vormittag / gestern einarbeiten
 

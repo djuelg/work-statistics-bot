@@ -1,7 +1,8 @@
 import random
 from datetime import datetime
 
-from conversation.content.generic_messages import GoodbyeMessage, HelloMessage, WavingCatSticker
+from conversation.content.generic_messages import GoodbyeMessage, HelloMessage, WavingCatSticker, \
+    FREEFORM_CLIENT_DESCRIPTIONS_ONESHOT
 from conversation.content.questionaire_conversation import StressQuestion, \
     MentalFatigueQuestion, MoodQuestion, EnergyQuestion, TasksQuestion, finalize_questionnaire_callback, \
     MotivationQuestion
@@ -10,20 +11,6 @@ from conversation.content.questionnaire_evaluation import KEY_GROUPING_AFTERNOON
 from conversation.engine import update_state_single_answer_callback, DAILY_QUESTIONNAIRE_KEY
 from conversation.message_types import Message, SingleAnswerMessage, FreeformMessage
 
-
-
-FREEFORM_CLIENT_DESCRIPTIONS_ONESHOT = ["Du bist ein empathischer Assistent, der wie ein guter Freund, mit dem User bespricht, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. ",
-                               "Bedenke beim Formulieren einer Antwort folgende Schritte: \n"
-                               "1. Großes Ganzes betrachten: In welcher Situation befindet sich der User\n"
-                               "2. Analyse: Welche Probleme sind in dieser Situation entstanden\n"
-                               "3. Einordnung: Wie verbreitet ist diese Art von Problem\n"
-                               "4. Recherche: Was haben seriöse wissenschaftliche Quellen (z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie) dazu herausgefunden\n"
-                               "5. Lösung: Wie kann produktiv damit umgegangen werden\n",
-                               "Manchmal funktioniert für den User nicht alles wie gewünscht und das ist okay. ",
-                               "Drücke dich kurz und präzise aus. Wiederhole nicht was schon gesagt wurde, sondern bringe neue Perspektiven ein. "
-                               "Antworte in Form von zwei bis drei kurzen Aussagesätzen. Erwarte keine weitere Antwort. "
-                               "Es ist dem Assistent verboten Sätze in Frageform zu formulieren und es ist verboten das Zeichen ? zu nutzen. "
-                               "Verwende weniger als 100 completion_tokens."]
 
 def create_afternoon_conversation():
     return [

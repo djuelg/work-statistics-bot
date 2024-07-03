@@ -6,17 +6,18 @@ from datetime import datetime, timedelta
 
 import pytz
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from telegram.constants import ChatAction
 from telegram.ext import ContextTypes, Application
 
 from conversation.content.afternoon_conversation import create_afternoon_conversation
+from conversation.content.generic_messages import FREEFORM_CLIENT_DESCRIPTION
 from conversation.content.weekly_conversation import create_weekly_conversation
 from conversation.content.morning_conversation import create_morning_conversation
-from conversation.content.questionnaire_evaluation import FREEFORM_CLIENT_DESCRIPTION
 from conversation.content.setup_conversation import WorkBeginQuestion
 from conversation.content.monthly_conversation import create_monthly_conversation
 from conversation.engine import ConversationEngine, HISTORY_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, StickerMessage, ImageMessage, \
-    ImageGroupMessage
+    ImageGroupMessage, GeneratedMessage
 from freeform_chat.freeform_client import FreeformClient
 from statistics.chart_generator import ChartGenerator, CumulatedDataGenerator
 
@@ -81,6 +82,8 @@ async def send_next_messages(bot, cengine, chat_id):
             media_group = [InputMediaPhoto(image) for image in message.media_group]
             await bot.send_media_group(chat_id, media_group)
         else:
+            if isinstance(message, GeneratedMessage):
+                await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
             message_text = message.content(cengine=cengine).text
             if message_text:
                 await bot.send_message(
