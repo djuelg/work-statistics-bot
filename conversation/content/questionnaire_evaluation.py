@@ -2,14 +2,24 @@ import random
 
 from conversation.content.generic_messages import WhatElseMessage, MEDITATION_LINK, remedy_callback, \
     GenericRemedyMessage, FREEFORM_CLIENT_DESCRIPTIONS_REMEDY
-from conversation.engine import update_state_single_answer_callback, CONVERSATION_MESSAGES_KEY
+from conversation.engine import update_state_single_answer_callback, CONVERSATION_REMEDY_KEY
 from conversation.message_types import Message, FreeformMessage, SingleAnswerMessage, GeneratedMessage
+from freeform_chat.freeform_client_base import ROLE_USER
+from freeform_chat.gpt_freeform_client import GPT4_MODEL
 
 STATE_NAMES = {
     "stress_state": "Stress",
     "mental_fatigue_state": "Mentale Ermüdung",
     "energy_state": "Schläfrigkeit",
     "motivation_state": "Unlust",
+}
+
+SEVERENESS_MAPPINGS = {
+    1: "gar keine",
+    2: "fast keine",
+    3: "ein wenig",
+    4: "einige",
+    5: "sehr starke"
 }
 
 GENERIC_REMEDY_STATE_KEY = "current_conversation.is_generic_remedy_shown"
@@ -162,8 +172,10 @@ class StartProblemEvaluationQuestion(SingleAnswerMessage):
         [("Nein, keine Lust", ANSWER_NO_MOTIVATION)]
     ]
 
-    def __init__(self, problem_keys, callback=None):
+    def __init__(self, problem_keys, all_mood_states, callback=None, key_base=None):
         self.problem_keys = problem_keys
+        self.all_mood_states = all_mood_states
+        self.key_base = key_base
 
         callback = callback if callback else self._problem_evaluation_callback
         super().__init__(self.PROMPTS, self.PROBLEM_EVALUATION_KEY, callback, self.STATES)
@@ -189,9 +201,9 @@ class StartProblemEvaluationQuestion(SingleAnswerMessage):
         if value == StartProblemEvaluationQuestion.ANSWER_YES:
             responses = [
                 ProblemExplanationQuestion(),
-                ProblemOriginQuestion(),
+                ProblemOriginQuestion(self.all_mood_states, self.key_base),
                 ProblemLongevityQuestion(),
-                ShortTermReliefQuestion(self.problem_keys),
+                ShortTermReliefQuestion(self.problem_keys, self.all_mood_states, self.key_base),
                 WhatElseMessage(text="Hast du noch Fragen?")
             ]
             responses.reverse()
@@ -215,10 +227,43 @@ class ProblemExplanationQuestion(SingleAnswerMessage):
 
 class ProblemOriginQuestion(SingleAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.remedy.problem_origin'
-    PROMPTS = ["Nun ist die Frage warum du dieses Problem haben könntest? Welche Ursachen spielen eine Rolle?"]
+    PROMPTS = ["Verstehe. Hast du eine Idee warum du dieses Problem haben könntest? Welche Ursachen spielen eine Rolle?"]
 
-    def __init__(self, callback=update_state_single_answer_callback):
+    def __init__(self, all_mood_states, key_base, callback=None):
+        self.all_mood_states = all_mood_states
+        self.key_base = key_base
+
+        callback = callback if callback else self._generated_remedy_response_callback
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+    def _generated_remedy_response_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        update_state_single_answer_callback(key, value, cengine=cengine, is_multi_answer_finished=is_multi_answer_finished)
+
+        questionnaire_result = "So sieht mein mentaler Zustand aus: \n"
+        for key in self.all_mood_states.keys():
+            questionnaire_result += f"{STATE_NAMES[key]} bereitet mir gerade {SEVERENESS_MAPPINGS[self.all_mood_states[key]]} Probleme. "
+        feelings = cengine.get_state(f"{self.key_base}.mood_state")
+        questionnaire_result += f"Folgende Stimmungen sind dominant: {', '.join(feelings)}."
+        cengine.save_conversation_messages(ROLE_USER, questionnaire_result, conversation_key=CONVERSATION_REMEDY_KEY)
+
+        problem_description = "Ich habe folgendes Problem: "
+        problem_description += cengine.get_state(ProblemExplanationQuestion.CALLBACK_KEY).strip() + " "
+        problem_description += cengine.get_state(ProblemOriginQuestion.CALLBACK_KEY).strip()
+        cengine.save_conversation_messages(ROLE_USER, problem_description, conversation_key=CONVERSATION_REMEDY_KEY)
+
+        instruction = "Bitte gib mir eine kurze Einordnung meinter Situation. Versuche Schritt für Schritt auf meinen mentalen Zustand und meine Stimmungen" \
+                      "einzugehen und diese mit den Problemen zu verknüpfen. " \
+                      "Erkläre zunächst inwiefern mich die negativen Teile meines mentalen Zustandes und die negativen Stimmungen psychologisch beeinflussen können. " \
+                      "Gehe darauf ein, wie diese mit meinem beschriebenen Problem in Zusammenhang stehen können. " \
+                      "Überlege dann, ob ich aus den positiven Teilen meines mentalen Zustandes und den positiven Stimmungen etwas hilfreiches ziehen kann. "
+        cengine.save_conversation_messages(ROLE_USER, instruction, conversation_key=CONVERSATION_REMEDY_KEY)
+
+        responses = [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
+        if value == "Ich möchte nichts davon tun":
+            responses.append(Message(text="Okay, das ist in Ordnung. Lass uns deine Angaben zusammenfassen:"))
+        else:
+            responses.append(Message(text="Okay, lass uns zusammenfassen:"))
+        return responses
 
 
 class ProblemLongevityQuestion(SingleAnswerMessage):
@@ -241,13 +286,25 @@ class ProblemOccurrenceQuestion(SingleAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.remedy.problem_occurrence'
     PROMPTS = ["Welche Zeiten oder Situationen fallen dir ein, in denen das Problem schon mal aufgetreten ist?"]
 
-    def __init__(self, callback=update_state_single_answer_callback):
+    def __init__(self, callback=None):
+        callback = callback if callback else self._generated_remedy_response_callback
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
+
+    def _generated_remedy_response_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        update_state_single_answer_callback(key, value, cengine=cengine, is_multi_answer_finished=is_multi_answer_finished)
+
+        occurence = "Das Problem ist leider kein Einzelfall. Ist is in folgenden Situationen schon mal aufgetreten: "
+        occurence += value
+        cengine.save_conversation_messages(ROLE_USER, occurence, conversation_key=CONVERSATION_REMEDY_KEY)
+
+        instruction = "Bitte gib mir eine kurze Einordnung, wie mit dem Problem längerfristig umgegangen werden kann. "
+        cengine.save_conversation_messages(ROLE_USER, instruction, conversation_key=CONVERSATION_REMEDY_KEY)
+        return [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
 
 
 class ShortTermReliefQuestion(SingleAnswerMessage):
     CALLBACK_KEY = 'daily_questionnaire.remedy.selected_relief'
-    PROMPTS = ["Gibt es unter den folgenden Dingen etwas, dass du _jetzt_ umsetzen kannst um Abhilfe zu schaffen?"]
+    PROMPTS = ["Gibt es unter den folgenden Dingen etwas, dass du _jetzt_ umsetzen kannst um kurzfristige Abhilfe zu schaffen?"]
     REMEDY_KEY_MAPPING = {
         "stress_state": "remedies.stress_remedies",
         "mental_fatigue_state": "remedies.mental_fatigue_remedies",
@@ -255,20 +312,27 @@ class ShortTermReliefQuestion(SingleAnswerMessage):
         "motivation_state": "remedies.motivation_remedies"
     }
 
-    def __init__(self, problem_keys, callback=None):
+    def __init__(self, problem_keys, all_mood_states, key_base, callback=None):
         self.problem_keys = problem_keys
+        self.all_mood_states = all_mood_states
+        self.key_base = key_base
 
         callback = callback if callback else self._generated_remedy_response_callback
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, [])
 
-
     def _generated_remedy_response_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
-        responses = [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_MESSAGES_KEY)]
-        if value == "Ich möchte nichts davon tun":
-            responses.append(Message(text="Okay, das ist in Ordnung. Lass uns deine Angaben zusammenfassen:"))
-        else:
-            responses.append(Message(text="Okay, lass uns zusammenfassen:"))
-        return responses
+        update_state_single_answer_callback(key, value, cengine=cengine,
+                                            is_multi_answer_finished=is_multi_answer_finished)
+
+        occurence = "Ich habe überlegt dass mir folgendes kurzfristige Abhilfe schaffen könnte: "
+        occurence += value
+        cengine.save_conversation_messages(ROLE_USER, occurence,
+                                           conversation_key=CONVERSATION_REMEDY_KEY)
+
+        instruction = "Ordne kurz ein, ob dies psychologisch gesehen ein guter erster Schritt ist und warum oder warum nicht. "
+        cengine.save_conversation_messages(ROLE_USER, instruction,
+                                           conversation_key=CONVERSATION_REMEDY_KEY)
+        return [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
 
     def content(self, cengine=None):
         problem_relief_options = []
@@ -354,7 +418,9 @@ class QuestionnaireEvaluationExpert(GenericExpert):
                 self._cengine.update_state(GENERIC_REMEDY_STATE_KEY, True)
                 responses.append(Message(text=self.BAD_RESPONSE.format(avg_mood)))
                 responses.append(Message(text=self.REMEDY_LOW_EXPECTATIONS))
-            responses.append(StartProblemEvaluationQuestion(most_severe_states.keys()))
+            else:
+                responses.append(Message(text=self.SOME_BAD_RESPONSE.format(avg_mood)))
+            responses.append(StartProblemEvaluationQuestion(most_severe_states.keys(), mood_states, key_base=self._key_base))
 
         # TODO: Veränderungen zu vormittag / gestern einarbeiten
 

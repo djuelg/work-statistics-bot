@@ -5,10 +5,12 @@ from datetime import datetime
 
 from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message, NoOpMessage, \
     WordlessMessage
+from freeform_chat.freeform_client_base import ROLE_ASSISTANT, ROLE_USER
 
 KEY_GROUPING_RECENTLY = 'recently_used'
 CURRENT_CONVERSATION_KEY = "current_conversation"
 CONVERSATION_MESSAGES_KEY = f"{CURRENT_CONVERSATION_KEY}.messages"
+CONVERSATION_REMEDY_KEY = f"{CURRENT_CONVERSATION_KEY}.remedy_messages"
 DAILY_QUESTIONNAIRE_KEY = 'daily_questionnaire'
 HISTORY_KEY = 'history'
 MULTI_ANSWER_FINISHED = 'Fertig'
@@ -49,14 +51,6 @@ def extend_predefined_with_recent_items(question_key, cengine, predefined_answer
     return predefined_answers
 
 
-class FreeformClientBase:
-    ROLE_ASSISTANT = 'assistant'
-    ROLE_USER = 'user'
-
-    def generate_responses(self, messages, context_descriptions="", is_oneshot=False):
-        pass
-
-
 class ConversationEngine:
     def __init__(self, queue=None, state=None, current_message=None, freeform_client=None):
         self.queue = deque(queue) if queue is not None else deque()
@@ -71,7 +65,7 @@ class ConversationEngine:
 
     def next_message(self):
         self.current_message = self.queue.popleft()
-        self._save_conversation_messages(FreeformClientBase.ROLE_ASSISTANT, self.current_message)
+        self.save_conversation_messages(ROLE_ASSISTANT, self.current_message)
         return self.current_message
 
     def is_waiting_for_user_input(self):
@@ -81,7 +75,7 @@ class ConversationEngine:
         )
 
     def handle_user_input(self, text):
-        self._save_conversation_messages(FreeformClientBase.ROLE_USER, Message(text=text))
+        self.save_conversation_messages(ROLE_USER, Message(text=text))
         if isinstance(self.current_message, FreeformMessage):
             last_messages = self.get_state(CONVERSATION_MESSAGES_KEY)
             answers = self.freeform_client.generate_responses(last_messages, context_descriptions=self.current_message.context_descriptions, is_oneshot=(not self.current_message.has_freeform_chaining))
@@ -111,7 +105,7 @@ class ConversationEngine:
         recent_items = list(dict.fromkeys(recent_items).keys())[:min(recent_size, len(recent_items))]
         self.update_state(recent_key, recent_items)
 
-    def _save_conversation_messages(self, role, current_message):
+    def save_conversation_messages(self, role, current_message, conversation_key=CONVERSATION_MESSAGES_KEY):
         from conversation.content.questionaire_conversation import MotivationQuestion, MentalFatigueQuestion, \
             StressQuestion, EnergyQuestion
         if not str(current_message) or str(current_message) == 'Fertig':
@@ -124,7 +118,7 @@ class ConversationEngine:
                 isinstance(current_message, StressQuestion) or \
                 isinstance(current_message, MentalFatigueQuestion):
             return
-        self.append_state(CONVERSATION_MESSAGES_KEY, (role, str(current_message)))
+        self.append_state(conversation_key, (role, str(current_message)))
 
     def get_state(self, key):
         nested_keys = key.split('.')

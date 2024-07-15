@@ -18,7 +18,7 @@ from conversation.content.monthly_conversation import create_monthly_conversatio
 from conversation.engine import ConversationEngine, HISTORY_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, StickerMessage, ImageMessage, \
     ImageGroupMessage, GeneratedMessage
-from freeform_chat.freeform_client import FreeformClient
+from freeform_chat.gpt_freeform_client import FreeformClient
 from statistics.chart_generator import ChartGenerator, CumulatedDataGenerator
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)

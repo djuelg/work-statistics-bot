@@ -1,5 +1,7 @@
 import random
 
+from freeform_chat.freeform_client_base import ROLE_ASSISTANT
+
 
 class MessageStateException(Exception):
     def __init__(self, message):
@@ -70,21 +72,26 @@ class FreeformMessage(Message):
 
 
 class GeneratedMessage(Message):
-    def __init__(self, context_descriptions, conversation_messages_key):
+    def __init__(self, context_descriptions, conversation_messages_key, last_messages=None, model=None):
         self.context_descriptions = context_descriptions
         self.conversation_messages_key = conversation_messages_key
+        self.last_messages = last_messages
+        self.model = model
         super().__init__("")
 
     def content(self, cengine=None):
-        last_messages = cengine.get_state(self.conversation_messages_key)
+        last_messages = self.last_messages or cengine.get_state(self.conversation_messages_key)
         answers = cengine.freeform_client.generate_responses(
             last_messages,
             context_descriptions=self.context_descriptions,
             is_oneshot=True,
-            max_tokens=800
+            max_tokens=600,
+            model=self.model
         )
         answers = [answer for sublist in answers for answer in sublist.split("\n\n")]
         self._content.text = "\n\n".join(answers)
+
+        cengine.save_conversation_messages(ROLE_ASSISTANT, self._content.text, conversation_key=self.conversation_messages_key)
         return self._content
 
 

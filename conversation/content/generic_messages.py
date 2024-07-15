@@ -30,20 +30,11 @@ FREEFORM_CLIENT_DESCRIPTIONS_ONESHOT = ["Du bist ein empathischer Assistent, der
 
 FREEFORM_CLIENT_DESCRIPTIONS_REMEDY = ["Du bist ein empathischer Assistent, der wie ein guter Freund, mit dem User bespricht, woran dieser tagtäglich arbeitet und in welcher Verfassung er dabei bist. ",
                                "Erzeuge mithilfe von First Principles Thinking eine ausführliche Einordnung des Problems. "
-                               "Bedenke beim Formulieren einer Antwort alle gegebenen Informationen: \n"
-                               "- Woran genau gearbeitet wird\n"
-                               "- Wie der User die Skalen beantwortet hat\n"
-                               "- Gehe insbesondere darauf ein, welche Stimmungen dominant sind\n"
-                               "- Wie oft das Problem auftritt\n"
-                               "- In welchen Situationen das Problem auftritt\n"
                                "Die Antwort sollte auf seriösen wissenschaftlichen Quellen (z.B. Gesundheitsportale, Ärzte, Hirnforschung, oder Psychologie) basieren\n"
-                               "Gehe anschließend auf seinen Lösungsansatz ein und animiere diesen umzusetzen. "
-                               "Antworte in Form von zwei bis drei Absätzen. Reflektiere im ersten Absatz ausführlich Schritt für Schritt das Problem anhand oben genannter Punkte. "
-                               "Gehe im zweiten Absatz auf die Lösung ein und erkläre kurz, warum diese aus psychologischer Sicht sinnvoll ist. ",
-                               "Sollte es sich um ein längerfristiges Problem handeln, gehe in einem letzten Absatz auf langfristige Lösungswege ein."
+                               "Antworte in Form eines Absatzes mit weniger als 300 Wörtern. "
                                "Erwarte keine weitere Antwort. "
                                "Es ist dem Assistent verboten Sätze in Frageform zu formulieren und es ist verboten das Zeichen ? zu nutzen. "
-                               "Verwende mehr als 1000 und weniger als 3000 character."]
+                               ]
 
 NAME_KEY = 'username'
 
