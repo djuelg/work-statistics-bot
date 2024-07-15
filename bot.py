@@ -38,7 +38,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def override_setup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    cengine.drop_state("remedies")
     cengine.begin_new_conversation(create_setup_conversation(first_met=False))
     await send_next_messages(context.bot, cengine, update.effective_chat.id)
 

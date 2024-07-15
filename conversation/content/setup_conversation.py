@@ -1,26 +1,34 @@
 import copy
 
 from conversation.content.generic_messages import ThumbsUpCatSticker
-from conversation.engine import update_state_multi_answer_callback, update_state_single_answer_callback
+from conversation.engine import update_state_multi_answer_callback, update_state_single_answer_callback, \
+    CURRENT_CONVERSATION_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, Message, AnswerableMessage
 
 
 def create_setup_conversation(first_met=True):
-    return [
+    conversation_flow = [
         FirstMetMessage() if first_met else UpdateSetupMessage(),
         IntroductionMessage(),
         NameQuestion(),
         NameAnswerMessage(),
-        WorkBeginQuestion(),
-        MultiAnswerIntroductionMessage(),
+        WorkBeginQuestion()]
+
+    if first_met:
+        conversation_flow += [MultiAnswerIntroductionMessage(),
         EnergyRemediesQuestion(),
         EnergyRemediesReaction(),
         StressRemediesQuestion(),
         MentalFatigueRemediesQuestion(),
-        MotivationRemediesQuestion(),
+        MotivationRemediesQuestion()]
+    else:
+        conversation_flow += [ReworkRemediesQuestion()]
+
+    conversation_flow += [
         SetupWrapupMessage(),
         ThumbsUpCatSticker(),
     ]
+    return conversation_flow
 
 
 class FirstMetMessage(Message):
@@ -90,6 +98,25 @@ class WorkBeginQuestion(SingleAnswerMessage):
         super().__init__(self.PROMPTS, self.CALLBACK_KEY, update_state_single_answer_callback, self.STATES)
 
 
+class ReworkRemediesQuestion(SingleAnswerMessage):
+    CALLBACK_KEY = f'{CURRENT_CONVERSATION_KEY}.rework_remedies'
+    PROMPTS = [
+        "Möchtest du gemeinsam überlegen, was dir persönlich in schwierigen Phasen kurzfristig helfen könnte?"]
+    STATES = [["Ja gerne"], ["Nein, danke"]]
+
+    def __init__(self, callback=None):
+        callback = callback if callback else self._rework_remedies_callback
+        super().__init__(self.PROMPTS, self.CALLBACK_KEY, callback, self.STATES)
+
+    def _rework_remedies_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
+        cengine.drop_state("remedies")
+        if value == "Ja gerne":
+            conversation_flow = [ EnergyRemediesQuestion(), EnergyRemediesReaction(), StressRemediesQuestion(),
+                     MentalFatigueRemediesQuestion(), MotivationRemediesQuestion()]
+            conversation_flow.reverse()
+            return conversation_flow
+
+
 class MultiAnswerIntroductionMessage(Message):
     PROMPTS = [
         "Manchmal stelle ich Fragen bei denen du zum einen _mehrere_ und zum Anderen _eigene_ Antworten geben kannst. "
@@ -125,7 +152,7 @@ class EnergyRemediesReaction(Message):
 
     def content(self, cengine=None):
         energy_remedies_items = cengine.get_state(self.CALLBACK_KEY)
-        energy_remedies_items = list(dict.fromkeys(energy_remedies_items).keys()) or ["Keine"]
+        energy_remedies_items = energy_remedies_items or ["Keine"]
         self._content.text = f"Du hast angegeben, dass dir folgende Dinge helfen, wenn du an einem Tag überdurchschnittlich müde bist: _{', '.join(energy_remedies_items)}_. " \
                              f"Diese Informationen helfen mir dir in Zukunft gezielte Vorschläge machen zu können. Wir sind gleich fertig, aber drei Fragen habe ich noch:"
         return self._content
