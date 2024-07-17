@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-from freeform_chat.freeform_client_base import FreeformClientBase
+from freeform_chat.freeform_client_base import FreeformClientBase, ROLE_SYSTEM
 
 GPT3_MODEL = "gpt-3.5-turbo"
 GPT4_MODEL = "gpt-4o"
@@ -19,7 +19,7 @@ class FreeformClient(FreeformClientBase):
             model = GPT3_MODEL
 
         openai_formatted_messages = [
-            *[{"role": self.ROLE_SYSTEM, "content": descr} for descr in context_descriptions],
+            *[{"role": ROLE_SYSTEM, "content": descr} for descr in context_descriptions],
             *[{"role": m[0], "content": m[1]} for m in messages],
         ]
         response = self.client.chat.completions.create(
