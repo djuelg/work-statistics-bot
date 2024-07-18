@@ -251,11 +251,12 @@ class ProblemOriginQuestion(SingleAnswerMessage):
         problem_description += cengine.get_state(ProblemOriginQuestion.CALLBACK_KEY).strip()
         cengine.save_conversation_messages(ROLE_USER, problem_description, conversation_key=CONVERSATION_REMEDY_KEY)
 
-        instruction = "Bitte gib mir eine kurze Einordnung meinter Situation. Versuche Schritt für Schritt auf meinen mentalen Zustand und meine Stimmungen" \
+        instruction = "Bitte gib mir eine kurze prägnante Einordnung meiner Situation. Versuche Schritt für Schritt auf meinen mentalen Zustand und meine Stimmungen" \
                       "einzugehen und diese mit den Problemen zu verknüpfen. " \
                       "Erkläre zunächst inwiefern mich die negativen Teile meines mentalen Zustandes und die negativen Stimmungen psychologisch beeinflussen können. " \
                       "Gehe darauf ein, wie diese mit meinem beschriebenen Problem in Zusammenhang stehen können. " \
-                      "Überlege dann, ob ich aus den positiven Teilen meines mentalen Zustandes und den positiven Stimmungen etwas hilfreiches ziehen kann. "
+                      "Überlege dann, ob ich aus den positiven Teilen meines mentalen Zustandes und den positiven Stimmungen etwas hilfreiches ziehen kann. " \
+                      "Beschränke deine Antwort auf ein bis maximal zwei Absätze. "
         cengine.save_conversation_messages(ROLE_USER, instruction, conversation_key=CONVERSATION_REMEDY_KEY)
 
         responses = [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
@@ -293,11 +294,12 @@ class ProblemOccurrenceQuestion(SingleAnswerMessage):
     def _generated_remedy_response_callback(self, key, value, cengine=None, is_multi_answer_finished=False):
         update_state_single_answer_callback(key, value, cengine=cengine, is_multi_answer_finished=is_multi_answer_finished)
 
-        occurence = "Das Problem ist leider kein Einzelfall. Ist is in folgenden Situationen schon mal aufgetreten: "
+        occurence = "Das Problem ist leider kein Einzelfall. Es ist in folgenden Situationen schon mal aufgetreten: "
         occurence += value
         cengine.save_conversation_messages(ROLE_USER, occurence, conversation_key=CONVERSATION_REMEDY_KEY)
 
-        instruction = "Bitte gib mir eine kurze Einordnung, wie mit dem Problem längerfristig umgegangen werden kann. "
+        instruction = ("Bitte gib mir eine kurze prägnante Einordnung, wie mit dem Problem längerfristig umgegangen werden kann. "
+                      "Beschränke deine Antwort auf ein bis maximal zwei Absätze. ")
         cengine.save_conversation_messages(ROLE_USER, instruction, conversation_key=CONVERSATION_REMEDY_KEY)
         return [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
 
@@ -324,12 +326,13 @@ class ShortTermReliefQuestion(SingleAnswerMessage):
         update_state_single_answer_callback(key, value, cengine=cengine,
                                             is_multi_answer_finished=is_multi_answer_finished)
 
-        occurence = "Ich habe überlegt dass mir folgendes kurzfristige Abhilfe schaffen könnte: "
+        occurence = "Ich habe überlegt, dass mir folgendes kurzfristige Abhilfe schaffen könnte: "
         occurence += value
         cengine.save_conversation_messages(ROLE_USER, occurence,
                                            conversation_key=CONVERSATION_REMEDY_KEY)
 
-        instruction = "Ordne kurz ein, ob dies psychologisch gesehen ein guter erster Schritt ist und warum oder warum nicht. "
+        instruction = ("Ordne kurz ein, ob dies psychologisch gesehen ein guter erster Schritt ist und warum oder warum nicht. "
+                       "Beschränke deine Antwort auf einen einzelnen Absatz. ")
         cengine.save_conversation_messages(ROLE_USER, instruction,
                                            conversation_key=CONVERSATION_REMEDY_KEY)
         return [GeneratedMessage(FREEFORM_CLIENT_DESCRIPTIONS_REMEDY, CONVERSATION_REMEDY_KEY, model=GPT4_MODEL)]
