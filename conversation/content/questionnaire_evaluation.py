@@ -79,7 +79,7 @@ class MentalFatigueExpert(GenericExpert):
                                   "Häufig geht sie mit einem Gefühl von Unlust einher. " \
                                   "Dein Körper versucht dir damit zu vermitteln, Erholungspausen einzulegen. "
     REMEDY_PAUSES_1 = "Die oben genannte Pomodoro Methode kann helfen, diese nicht zu vergessen."
-    REMEDY_PAUSES_2 = "Die Pomodoro Methode kann helfen, diese nicht zu vergessen. Bspw. mithilfe des @pomodoro\_timer\_bot."
+    REMEDY_PAUSES_2 = "Die Pomodoro Methode kann helfen, diese nicht zu vergessen. Bspw. mithilfe meine guten Kollegen @pomodoro\_cat\_bot."
     REMEDY_SLOW_DOWN = "Mach in den Pausen etwas, was dich mental entlastet: Ein paar Minuten nicht sitzen, an die frische Luft gehen, oder z.B. einen Power-Nap. "
     REMEDY_WHOLE_SYSTEM = "Ergänzend ist es ratsam, regelmäßige körperliche Aktivität in den Tagesablauf einzubauen, " \
                           "um die mentale Ermüdung zu reduzieren und die allgemeine geistige Gesundheit zu fördern. " \
@@ -111,7 +111,7 @@ class SleepinessExpert(GenericExpert):
                                 "Falls möglich arbeite ein bisschen im Stehen und nutze die Pausen um dich kurz zu bewegen. "
     REMEDY_NAP = "Solltest du schlecht oder zu kurz geschlafen haben, wird dir außer einem Nap vermutlich nicht viel helfen, " \
                  "also wenn du die Zeit dafür hast nimm sie dir gerne. In Maßen können auch proteinreiche Snacks oder koffeinhaltige Getränke helfen."
-    REMEDEY_POMODORO = "Um sie nicht zu vergessen empfehle ich dir die Pomodoro Methode und dafür z.B. den Bot @pomodoro\_timer\_bot zu nutzen."
+    REMEDEY_POMODORO = "Um sie nicht zu vergessen empfehle ich dir die Pomodoro Methode und dafür meinen guten Kollegen @pomodoro\_cat\_bot zu nutzen."
 
     def run(self):
         is_generic_remedy_shown = self._cengine.get_state(GENERIC_REMEDY_STATE_KEY)
@@ -138,7 +138,7 @@ class DemotivationExpert(GenericExpert):
                        "Vielleicht hilfst du damit aber auch jemand Anderem. Vielleicht gönnst du dir auch etwas, nachdem du dich überwunden hast: " \
                        "Zeit für dein Lieblingshobby, oder ein gutes Essen zum Beispiel. "
     REMEDY_PAUSES_1 = "Es kann auch helfen viele kurze Pausen zu machen, wie bei der oben genannten Pomodoro Methode."
-    REMEDY_PAUSES_2 = "Es kann auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich z.B. an @pomodoro\_timer\_bot wenden."
+    REMEDY_PAUSES_2 = "Es kann auch helfen viele kurze Pausen zu machen, wie bei der Pomodoro Methode. Dafür kannst du dich an meinen guten Kollegen @pomodoro\_cat\_bot wenden."
     REMEDY_REFLECTION = "Hilfreich ist es außerdem die Gründe für die fehlende Motivation zu reflektieren. War dein Tag einfach anstrengend? " \
                         "Ist die konkrete Aufgabe unangenehm? Oder gibt es vielleicht allgemein etwas, dass dich unglücklich macht? " \
                         "Was kannst du tun, um in Zukunft wieder mit mehr Motivation durch den Tag zu gehen?"
@@ -369,8 +369,8 @@ class QuestionnaireEvaluationExpert(GenericExpert):
     SOME_BAD_RESPONSE = "Deine Bewertung ergibt einen Durchschnitt von {}/5, und es lässt sich erkennen, dass du bestimmte Aspekte des Tages als anspruchsvoll empfunden hast."
     BAD_RESPONSE = "Der Durchschnitt von {}/5 deutet darauf hin, dass es dir allgemein nicht so gut zu gehen scheint."
     REMEDY_LOW_EXPECTATIONS = f"Ich würde dir empfehlen nicht allzu hohe Erwartungen an dich zu haben, und nicht " \
-                              f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten, z.B. mit Hilfe des @pomodoro\_timer\_bot."
-    REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe von @pomodoro\_timer\_bot"
+                              f"länger als nötig zu arbeiten. Nimm dir regelmäßig kurze Auszeiten, z.B. mit Hilfe meines guten Kollegen @pomodoro\_cat\_bot."
+    REMEDEY_POMODORO = f"Um die Auszeiten nicht zu vergessen, kannst du es auch mit der Pomodoro-Methode probieren. Bspw. mithilfe meines guten Kollegen @pomodoro\_cat\_bot"
     REMEDY_TALK = f"Wenn du deine Situation ausführlicher besprechen möchtest, schreib mir einfach. Ansonsten ist das erstmal alles. Du schaffst das schon😌"
     REMEDY_GENERIC = "Okay, hier noch ein paar Ideen, wofür du die Pausen nutzen könntest: "
 
