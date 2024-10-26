@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+from datetime import datetime
 
 from telegram import Update
 from telegram.constants import ChatAction
@@ -111,7 +112,7 @@ async def override_afternoon(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def update_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cengine = get_conversation_engine(context, chat_id=update.effective_chat.id)
-    cengine.copy_today_to_history()
+    cengine.update_history_with_questionnaire(datetime.today().date())
     await context.bot.send_message(
         chat_id=update.effective_chat.id, text='Daten in History übertragen.'
     )

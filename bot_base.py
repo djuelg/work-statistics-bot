@@ -31,6 +31,7 @@ if not OPENAI_TOKEN:
     from chatbot_secrets import OPENAI_TOKEN
 
 DAYS_MON_FRI = (1, 2, 3, 4, 5)
+DAYS_WHOLE_WEEk = (0, 1, 2, 3, 4, 5, 6)
 DAYS_SUN = (0,)
 TZ_DE = 'Europe/Berlin'
 
@@ -41,10 +42,10 @@ KEY_MORNING_QUESTIONNAIRE = 'daily_questionnaire.morning'
 
 MORNING_JOB = "{}_morning_message"
 AFTERNOON_JOB = "{}_afternoon_message"
-EVENING_JOB = "{}_evening_message"
+EARLY_MORNING_JOB = "{}_early_morning_message"
 WEEKLY_JOB = "{}_weekly_message"
 MONTHLY_JOB = "{}_monthly_message"
-JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EVENING_JOB, WEEKLY_JOB, MONTHLY_JOB]
+JOB_NAMES = [MORNING_JOB, AFTERNOON_JOB, EARLY_MORNING_JOB, WEEKLY_JOB, MONTHLY_JOB]
 
 global_cengine_cache = {}  # Global cache that holds pairs of (chat_id -> cengine)
 
@@ -77,10 +78,12 @@ async def send_next_messages(bot, cengine, chat_id):
         if isinstance(message, StickerMessage):
             await bot.send_sticker(chat_id=chat_id, sticker=message.sticker_id)
         elif isinstance(message, ImageMessage):
-            await bot.send_photo(chat_id, message.image)
+            if message.image is not None:
+                await bot.send_photo(chat_id, message.image)
         elif isinstance(message, ImageGroupMessage):
-            media_group = [InputMediaPhoto(image) for image in message.media_group]
-            await bot.send_media_group(chat_id, media_group)
+            if message.media_group is not None:
+                media_group = [InputMediaPhoto(image) for image in message.media_group]
+                await bot.send_media_group(chat_id, media_group)
         else:
             if isinstance(message, GeneratedMessage):
                 await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
@@ -143,8 +146,8 @@ async def setup_jobqueue_after_startup(application: Application) -> None:
 
 def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, application=None):
     work_begin_hour = int(cengine.get_state(WorkBeginQuestion.CALLBACK_KEY))
-    morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=7))
-    # morning_time = datetime.now() + timedelta(seconds=10)  # debug override
+    morning_time = datetime.combine(datetime.now().date(), datetime.min.time().replace(hour=work_begin_hour, minute=19))
+    # morning_time = datetime.now() + timedelta(seconds=15)  # debug override
     morning_time = pytz.timezone(TZ_DE).localize(morning_time)
     morning_job_name = MORNING_JOB.format(chat_id)
 
@@ -152,9 +155,9 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     # afternoon_time = morning_time + timedelta(seconds=30) # debug override
     afternoon_job_name = AFTERNOON_JOB.format(chat_id)
 
-    evening_time = morning_time.replace(hour=23, minute=37)
-    # evening_time = morning_time + timedelta(seconds=50) # debug override
-    evening_job_name = EVENING_JOB.format(chat_id)
+    early_morning_time = morning_time - timedelta(hours=2)
+    # early_morning_time = datetime.now() + timedelta(seconds=10) # debug override
+    early_morning_job_name = EARLY_MORNING_JOB.format(chat_id)
 
     weekly_job_name = WEEKLY_JOB.format(chat_id)
     monthly_time = morning_time.replace(hour=20, minute=00)
@@ -167,8 +170,8 @@ def setup_jobqueue_callbacks(cengine, context, chat_id, job_queue=None, applicat
     job_queue.run_daily(jobqueue_callback, afternoon_time, chat_id=chat_id, name=afternoon_job_name,
                         days=DAYS_MON_FRI, data=job_data,
                         job_kwargs={'id': afternoon_job_name, 'replace_existing': True})
-    job_queue.run_daily(jobqueue_callback, evening_time, chat_id=chat_id, name=evening_job_name,
-                        data=job_data, job_kwargs={'id': evening_job_name, 'replace_existing': True})
+    job_queue.run_daily(jobqueue_callback, early_morning_time, chat_id=chat_id, name=early_morning_job_name,
+                        days=DAYS_WHOLE_WEEk, data=job_data, job_kwargs={'id': early_morning_job_name, 'replace_existing': True})
     job_queue.run_daily(jobqueue_callback, morning_time, chat_id=chat_id, name=weekly_job_name,
                         days=DAYS_SUN, data=job_data, job_kwargs={'id': weekly_job_name, 'replace_existing': True})
     job_queue.run_monthly(jobqueue_callback, day=-1, when=monthly_time, chat_id=chat_id, name=monthly_job_name,
@@ -188,15 +191,15 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
     if not cengine:
         del global_cengine_cache[context.job.chat_id]
         return
+    elif context.job.name == EARLY_MORNING_JOB.format(context.job.chat_id):
+        cengine.update_history_with_questionnaire((datetime.today() - timedelta(days=1)).date())
+        conversation = []
     elif context.job.name == MORNING_JOB.format(context.job.chat_id):
         cengine.drop_state(KEY_MORNING_QUESTIONNAIRE)
         conversation = create_morning_conversation()
     elif context.job.name == AFTERNOON_JOB.format(context.job.chat_id):
         cengine.drop_state(KEY_AFTERNOON_QUESTIONNAIRE)
         conversation = create_afternoon_conversation()
-    elif context.job.name == EVENING_JOB.format(context.job.chat_id):
-        cengine.copy_today_to_history()
-        conversation = []
     elif context.job.name == WEEKLY_JOB.format(context.job.chat_id):
         history = cengine.get_state(HISTORY_KEY)
         data_generator = CumulatedDataGenerator(history)
@@ -220,8 +223,8 @@ async def jobqueue_callback(context: ContextTypes.user_data) -> None:
 async def create_weekly_charts(data_generator):
     try:
         chart_generator = ChartGenerator(data_generator)
-        start_date = str((datetime.now() - timedelta(days=7)).date())
-        end_date = str(datetime.now().date())
+        start_date = (datetime.now() - timedelta(days=7)).date()
+        end_date = datetime.now().date()
         cal_week = (datetime.now() - timedelta(days=7)).isocalendar()[1]
         line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung KW {cal_week}\n',
             start_date=start_date, end_date=end_date)
@@ -234,8 +237,8 @@ async def create_weekly_charts(data_generator):
 
 async def create_weekly_statistics(data_generator: CumulatedDataGenerator):
     try:
-        start_date = str((datetime.now() - timedelta(days=7)).date())
-        end_date = str(datetime.now().date())
+        start_date = (datetime.now() - timedelta(days=7)).date()
+        end_date = datetime.now().date()
         return data_generator.calculate_metadata(start_date, end_date)
     except Exception as e:
         print(e)
@@ -247,8 +250,8 @@ async def create_monthly_charts(data_generator: CumulatedDataGenerator):
         chart_generator = ChartGenerator(data_generator)
         current_date = datetime.now()
         _, num_days = calendar.monthrange(current_date.year, current_date.month)
-        start_date = str(datetime(current_date.year, current_date.month, 1).date())
-        end_date = str(datetime(current_date.year, current_date.month, num_days).date())
+        start_date = datetime(current_date.year, current_date.month, 1).date()
+        end_date = datetime(current_date.year, current_date.month, num_days).date()
         locale.setlocale(locale.LC_TIME, "de_DE.utf8")
         month_name = current_date.strftime("%B")
         line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung {month_name}\n',
@@ -264,8 +267,8 @@ async def create_monthly_statistics(data_generator: CumulatedDataGenerator):
     try:
         current_date = datetime.now()
         _, num_days = calendar.monthrange(current_date.year, current_date.month)
-        start_date = str(datetime(current_date.year, current_date.month, 1).date())
-        end_date = str(datetime(current_date.year, current_date.month, num_days).date())
+        start_date = datetime(current_date.year, current_date.month, 1).date()
+        end_date = datetime(current_date.year, current_date.month, num_days).date()
         return data_generator.calculate_metadata(start_date, end_date)
     except Exception as e:
         print(e)

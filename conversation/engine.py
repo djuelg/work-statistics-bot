@@ -1,7 +1,6 @@
 import copy
 import random
 from collections import deque
-from datetime import datetime
 
 from conversation.message_types import AnswerableMessage, FreeformMessage, MultiAnswerMessage, Message, NoOpMessage, \
     WordlessMessage
@@ -90,12 +89,12 @@ class ConversationEngine:
         if answers:
             self.queue.extendleft(answers)
 
-    def copy_today_to_history(self):
+    def update_history_with_questionnaire(self, on_date):
         daily_questionnaire = self.get_state(DAILY_QUESTIONNAIRE_KEY)
         if daily_questionnaire:
-            date_key = f'{HISTORY_KEY}.{datetime.today().date()}'
-            today_data = copy.deepcopy(daily_questionnaire)
-            self.update_state(date_key, today_data)
+            date_key = f'{HISTORY_KEY}.{on_date}'
+            current_data = copy.deepcopy(daily_questionnaire)
+            self.update_state(date_key, current_data)
         self.drop_state(DAILY_QUESTIONNAIRE_KEY)
 
     def update_recently_used_values(self, key, value, recent_size=20):

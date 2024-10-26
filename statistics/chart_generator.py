@@ -19,9 +19,6 @@ class CumulatedDataGenerator:
         return [(item - offset) if isinstance(item, float) else item for sublist in zip(list1, list2) for item in
                 sublist]
 
-    def _use_german_date(self, val):
-        return datetime.strptime(val, '%Y-%m-%d').strftime('%d.%m.')
-
     def calculate_separated_states(self, start_date, end_date, compact=False):
         separated_data = {'dates': [],
                           'morning_labels': [],
@@ -35,8 +32,9 @@ class CumulatedDataGenerator:
                           'afternoon_fatigue': [],
                           'afternoon_demotivation': []}
 
-        for date, day_data in self._history.items():
-            # Check if the date is within the specified range
+        for date_str, day_data in self._history.items():
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
             if start_date <= date <= end_date:
                 separated_data['dates'].append(date)
 
@@ -48,10 +46,10 @@ class CumulatedDataGenerator:
                 separated_data['morning_demotivation'].append(morning_data.get('motivation_state', None))
                 if not compact:
                     separated_data['morning_labels'].append(
-                        f"$\\bf{{{self._use_german_date(date)}}}Morgens$\n{NEWLINE.join(self._history[date]['morning']['tasks'])}")
+                        f"$\\bf{{{date.strftime('%d.%m.')}}}Morgens$\n{NEWLINE.join(self._history[date_str]['morning']['tasks'])}")
                 else:
                     separated_data['morning_labels'].append(
-                        f"$\\bf{{{self._use_german_date(date)}}}$ Morgens")
+                        f"$\\bf{{{date.strftime('%d.%m.')}}}$ Morgens")
 
                 # Extract afternoon data
                 afternoon_data = day_data.get('afternoon', {})
@@ -61,7 +59,7 @@ class CumulatedDataGenerator:
                 separated_data['afternoon_demotivation'].append(afternoon_data.get('motivation_state', None))
                 if not compact:
                     separated_data['afternoon_labels'].append(
-                        f"$\\bf{{{self._use_german_date(date)}}}Mittags$\n{NEWLINE.join(self._history[date].get('afternoon', {}).get('tasks', []))}")
+                        f"$\\bf{{{date.strftime('%d.%m.')}}}Mittags$\n{NEWLINE.join(self._history[date_str].get('afternoon', {}).get('tasks', []))}")
                 else:
                     separated_data['afternoon_labels'].append(
                         f"Mittags")
@@ -86,15 +84,16 @@ class CumulatedDataGenerator:
                 'combined_demotivation': combined_demotivation,
                 'combined_labels': combined_labels,
                 }
-    
+
     def calculate_most_used(self, start_date, end_date):
         # Combine morning and afternoon data
         mood_data = {}
-        for date in self._history:
+        for date_str in self._history:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
             if start_date <= date <= end_date:
-                mood_states = self._history[date]['morning']['mood_state'] + self._history[date].get('afternoon',
-                                                                                                     {}).get(
-                    'mood_state', [])
+                morning_mood_state = self._history.get(date_str, {}).get('morning', {}).get('mood_state', [])
+                afternoon_mood_state = self._history.get(date_str, {}).get('afternoon', {}).get('mood_state', [])
+                mood_states = morning_mood_state + afternoon_mood_state
                 for mood_state in mood_states:
                     mood_data[mood_state] = mood_data.get(mood_state, 0) + 1
 
@@ -103,10 +102,12 @@ class CumulatedDataGenerator:
 
         # Combine morning and afternoon data
         tasks_data = {}
-        for date in self._history:
+        for date_str in self._history:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
             if start_date <= date <= end_date:
-                tasks = self._history[date]['morning']['tasks'] + self._history[date].get('afternoon', {}).get('tasks',
-                                                                                                               [])
+                morning_tasks = self._history.get(date_str, {}).get('morning', {}).get('tasks', [])
+                afternoon_tasks = self._history.get(date_str, {}).get('afternoon', {}).get('tasks', [])
+                tasks = morning_tasks + afternoon_tasks
                 for task in tasks:
                     tasks_data[task] = tasks_data.get(task, 0) + 1
 
@@ -180,10 +181,10 @@ class ChartGenerator:
         self.data_generator = data_generator
 
     def _prepare_line_chart(self, ax, energy, stress, fatigue, demotivation, labels, title, compact=False):
-        median_energy = np.average([value for value in energy if value is not None])
-        median_stress = np.average([value for value in stress if value is not None])
-        median_fatigue = np.average([value for value in fatigue if value is not None])
-        median_demotivation = np.average([value for value in demotivation if value is not None])
+        median_energy = np.average([value for value in energy if value is not None]) if energy else 0
+        median_stress = np.average([value for value in stress if value is not None]) if stress else 0
+        median_fatigue = np.average([value for value in fatigue if value is not None]) if fatigue else 0
+        median_demotivation = np.average([value for value in demotivation if value is not None]) if demotivation else 0
         linewidth = 5.0 if not compact else 3.0
         markersize = 24 if not compact else 18
         ax.plot(energy, range(len(labels)), label=f'Schläfrigkeit (Avg: {median_energy:.2f})', marker='o',
@@ -192,7 +193,8 @@ class ChartGenerator:
                 markersize=markersize, linestyle='solid', alpha=1, color='palegreen', linewidth=linewidth)
         ax.plot(demotivation, range(len(labels)), label=f'Unlust (Avg: {median_demotivation:.2f})', marker='o',
                 markersize=markersize, linestyle='solid', alpha=1, color='wheat', linewidth=linewidth)
-        ax.plot(stress, range(len(labels)), label=f'Stress Level (Avg: {median_stress:.2f})', marker='o', markersize=markersize,
+        ax.plot(stress, range(len(labels)), label=f'Stress Level (Avg: {median_stress:.2f})', marker='o',
+                markersize=markersize,
                 linestyle='solid', alpha=1, color='coral', linewidth=linewidth)
         # ax.set_xlabel('Höhe', color='white')  # Set text color
         ax.set_title(title, fontweight='light', fontsize=32, color='white')  # Adjust title font and color
