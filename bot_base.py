@@ -19,7 +19,8 @@ from conversation.engine import ConversationEngine, HISTORY_KEY
 from conversation.message_types import SingleAnswerMessage, MultiAnswerMessage, StickerMessage, ImageMessage, \
     ImageGroupMessage, GeneratedMessage
 from freeform_chat.gpt_freeform_client import FreeformClient
-from statistics.chart_generator import ChartGenerator, CumulatedDataGenerator
+from statistics.chart_generator import ChartGenerator
+from statistics.data_generator import CumulatedDataGenerator
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", None)
 BOT_TOKEN = os.environ.get("BOT_TOKEN", None)
@@ -229,7 +230,8 @@ async def create_weekly_charts(data_generator):
         line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung KW {cal_week}\n',
             start_date=start_date, end_date=end_date)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
-        return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
+        mood_calendar_buffer = chart_generator.generate_mood_calendar(start_date=start_date, end_date=end_date)
+        return [line_chart_buffer, mood_calendar_buffer, tasks_chart_buffer, mood_chart_buffer]
     except Exception as e:
         print(e)
         return None
@@ -257,7 +259,8 @@ async def create_monthly_charts(data_generator: CumulatedDataGenerator):
         line_chart_buffer = chart_generator.generate_line_chart(title=f'\nZusammenfassung {month_name}\n',
             start_date=start_date, end_date=end_date, compact=True)
         tasks_chart_buffer, mood_chart_buffer = chart_generator.generate_bar_charts(start_date=start_date, end_date=end_date)
-        return [line_chart_buffer, tasks_chart_buffer, mood_chart_buffer]
+        mood_calendar_buffer = chart_generator.generate_mood_calendar(start_date=start_date, end_date=end_date)
+        return [line_chart_buffer, mood_calendar_buffer, tasks_chart_buffer, mood_chart_buffer]
     except Exception as e:
         print(e)
         return None

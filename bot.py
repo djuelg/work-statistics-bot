@@ -20,7 +20,7 @@ from conversation.content.setup_conversation import create_setup_conversation, W
 from conversation.content.monthly_conversation import create_monthly_conversation
 from conversation.engine import MultiAnswerMessage, MULTI_ANSWER_FINISHED, HISTORY_KEY, CURRENT_CONVERSATION_KEY
 from conversation.message_types import FreeformMessage
-from statistics.chart_generator import CumulatedDataGenerator
+from statistics.data_generator import CumulatedDataGenerator
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
