@@ -128,7 +128,8 @@ class CumulatedDataGenerator:
             # Morning mood states
             morning_mood_states = [sep_data['morning_energy'][idx], sep_data['morning_stress'][idx],
                                    sep_data['morning_fatigue'][idx], sep_data['morning_demotivation'][idx]]
-            morning_med_mood = sorted(morning_mood_states)[len(morning_mood_states) // 2]
+            morning_mood_states = [val for val in morning_mood_states if val is not None]
+            morning_med_mood = sorted(morning_mood_states)[len(morning_mood_states) // 2] if morning_mood_states else -1
 
             if morning_med_mood < 3:
                 good_mornings += 1
@@ -143,9 +144,12 @@ class CumulatedDataGenerator:
             # Afternoon mood states
             afternoon_mood_states = [sep_data['afternoon_energy'][idx], sep_data['afternoon_stress'][idx],
                                      sep_data['afternoon_fatigue'][idx], sep_data['afternoon_demotivation'][idx]]
-            afternoon_med_mood = sorted(afternoon_mood_states)[len(afternoon_mood_states) // 2]
+            afternoon_mood_states = [val for val in afternoon_mood_states if val is not None]
+            afternoon_med_mood = sorted(afternoon_mood_states)[len(afternoon_mood_states) // 2] if afternoon_mood_states else None
 
-            if afternoon_med_mood < 3:
+            if afternoon_med_mood is None:
+                pass
+            elif afternoon_med_mood < 3:
                 good_afternoons += 1
             elif afternoon_med_mood == 3:
                 if any(val >= 4 for val in afternoon_mood_states):
@@ -156,13 +160,17 @@ class CumulatedDataGenerator:
                 bad_afternoons += 1
 
             # Update counters for stress, mental fatigue, sleepy, and no motivation days
-            if sep_data['morning_stress'][idx] > 3 or sep_data['afternoon_stress'][idx] > 3:
+            if (sep_data['morning_stress'][idx] and sep_data['morning_stress'][idx] > 3 or
+                    sep_data['afternoon_stress'][idx] and sep_data['afternoon_stress'][idx] > 3):
                 stress_days += 1
-            if sep_data['morning_fatigue'][idx] > 3 or sep_data['afternoon_fatigue'][idx] > 3:
+            if (sep_data['morning_fatigue'][idx] and sep_data['morning_fatigue'][idx] > 3 or
+                    sep_data['afternoon_fatigue'][idx] and sep_data['afternoon_fatigue'][idx] > 3):
                 mental_fatigue_days += 1
-            if sep_data['morning_energy'][idx] > 3 or sep_data['afternoon_energy'][idx] > 3:
+            if (sep_data['morning_energy'][idx] and sep_data['morning_energy'][idx] > 3 or
+                    sep_data['afternoon_energy'][idx] and sep_data['afternoon_energy'][idx] > 3):
                 sleepy_days += 1
-            if sep_data['morning_demotivation'][idx] > 3 or sep_data['afternoon_demotivation'][idx] > 3:
+            if (sep_data['morning_demotivation'][idx] and sep_data['morning_demotivation'][idx] > 3 or
+                    sep_data['afternoon_demotivation'][idx] and sep_data['afternoon_demotivation'][idx] > 3):
                 no_motivation_days += 1
 
         return (day_count, good_mornings, good_afternoons, mid_mornings, mid_afternoons, bad_mornings,
